@@ -1,0 +1,36 @@
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# ─── Local database & uploads (not source) ────────────────
+*.db
+*.sqlite
+*.sqlite3
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ─── Secrets / environment ────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Node / frontend build output ─────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# ─── Editor / OS noise ────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# ─── Scratch / verification scaffolding ───────────────────
+_ssr*/
+_*.log
