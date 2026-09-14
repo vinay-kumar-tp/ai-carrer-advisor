@@ -1,6 +1,7 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { BrandLogo } from './BrandLogo';
 import {
   LayoutDashboard,
   User,
@@ -45,10 +46,9 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-logo-icon">AI</div>
-        <div className="sidebar-logo-text">Career Advisor</div>
-      </div>
+      <Link to="/dashboard" className="sidebar-header" aria-label="Carrerpulse Ai — go to dashboard">
+        <BrandLogo variant="full" markSize={40} />
+      </Link>
       <nav className="sidebar-menu">
         {navItems.map((item) => {
           const Icon = item.icon;

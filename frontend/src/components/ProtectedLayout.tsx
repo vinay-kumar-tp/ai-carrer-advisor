@@ -3,9 +3,10 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
+import { IntroAnimation } from './IntroAnimation';
 
 export const ProtectedLayout: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user, showIntro, dismissIntro } = useAuth();
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -13,6 +14,7 @@ export const ProtectedLayout: React.FC = () => {
 
   return (
     <div className="app-container">
+      {showIntro && <IntroAnimation userName={user?.full_name} onDone={dismissIntro} />}
       <Sidebar />
       <div className="main-content">
         <Navbar />

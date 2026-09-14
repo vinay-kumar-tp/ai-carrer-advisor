@@ -24,8 +24,12 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
 
-    # AI
+    # AI — Gemini (Google) and/or OpenRouter (OpenAI-compatible gateway).
+    # If OPENROUTER_API_KEY is set it takes precedence; otherwise Gemini is used;
+    # otherwise the app falls back to deterministic local heuristics.
     GEMINI_API_KEY: Optional[str] = None
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
 
     # Storage
     UPLOAD_DIR: str = "uploads"

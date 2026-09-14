@@ -1,0 +1,228 @@
+/* ============================================================
+   Carrerpulse Ai — cinematic 3D login intro (~6s, CSS-only)
+   Transform/opacity driven for smooth GPU compositing.
+   ============================================================ */
+
+.intro-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, #0b1730 0%, #060a16 55%, #03050c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1100px;
+  animation: introIn 0.6s ease both;
+}
+.intro-root.is-leaving { animation: introOut 0.7s ease forwards; }
+
+@keyframes introIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes introOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.06); } }
+
+/* Aurora glow behind everything */
+.intro-aurora {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(closest-side at 30% 35%, rgba(56, 189, 248, 0.28), transparent 70%),
+    radial-gradient(closest-side at 70% 55%, rgba(124, 58, 237, 0.26), transparent 70%),
+    radial-gradient(closest-side at 55% 30%, rgba(37, 99, 235, 0.24), transparent 70%);
+  filter: blur(30px);
+  animation: introAurora 8s ease-in-out infinite alternate;
+}
+@keyframes introAurora {
+  from { transform: translate3d(-3%, -2%, 0) scale(1); }
+  to   { transform: translate3d(3%, 2%, 0) scale(1.12); }
+}
+
+.intro-stage {
+  position: relative;
+  transform-style: preserve-3d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* ── 3D perspective grid floor ── */
+.intro-grid-wrap {
+  position: absolute;
+  bottom: -34vh;
+  left: 50%;
+  width: 200vw;
+  height: 80vh;
+  transform: translateX(-50%) rotateX(74deg);
+  transform-origin: bottom center;
+  transform-style: preserve-3d;
+  opacity: 0;
+  animation: introGridReveal 1.2s ease 0.2s forwards;
+  -webkit-mask-image: linear-gradient(to top, #000 8%, transparent 78%);
+  mask-image: linear-gradient(to top, #000 8%, transparent 78%);
+}
+.intro-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(96, 165, 250, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(96, 165, 250, 0.35) 1px, transparent 1px);
+  background-size: 64px 64px;
+  animation: introGridScroll 3.2s linear infinite;
+}
+@keyframes introGridReveal { to { opacity: 0.7; } }
+@keyframes introGridScroll { from { background-position: 0 0; } to { background-position: 0 64px; } }
+
+/* ── Orbiting career tokens ── */
+.intro-orbit-scene {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  transform-style: preserve-3d;
+  animation: introSceneSpin 14s linear infinite;
+  opacity: 0;
+  animation: introOrbitFade 1s ease 1s forwards, introSceneSpin 14s linear infinite 1s;
+}
+.intro-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(var(--i) * 60deg)) rotateX(18deg);
+}
+.intro-token {
+  position: absolute;
+  transform: translate(-50%, -50%) translateZ(170px);
+  font-size: 1.5rem;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  animation: introTokenBob 3.2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.5s);
+}
+@keyframes introOrbitFade { to { opacity: 1; } }
+@keyframes introSceneSpin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+@keyframes introTokenBob { 0%, 100% { margin-top: -6px; } 50% { margin-top: 6px; } }
+
+/* ── Logo assembles in 3D ── */
+.intro-logo-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: introLogoAssemble 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both,
+             introLogoFloat 4s ease-in-out 1.9s infinite;
+}
+.intro-logo-glow {
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.55), transparent 70%);
+  filter: blur(22px);
+  animation: introPulse 2.4s ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes introLogoAssemble {
+  from { opacity: 0; transform: translateZ(-380px) rotateX(45deg) rotateY(-30deg) scale(0.5); }
+  to   { opacity: 1; transform: translateZ(0) rotateX(0) rotateY(0) scale(1); }
+}
+@keyframes introLogoFloat {
+  0%, 100% { transform: translateY(0) rotateY(0deg); }
+  50%      { transform: translateY(-10px) rotateY(8deg); }
+}
+@keyframes introPulse { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.15); } }
+
+/* ── Wordmark + tagline ── */
+.intro-wordmark {
+  margin-top: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: introRise 0.9s ease 1.5s forwards;
+}
+.intro-word {
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #eaf3ff, #93b4e8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.intro-word-ai {
+  background: linear-gradient(120deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.intro-tagline {
+  font-size: clamp(0.75rem, 2.4vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #93b4e8;
+  font-style: italic;
+}
+@keyframes introRise { to { opacity: 1; transform: translateY(0); } }
+
+/* ── Journey stepper ── */
+.intro-journey {
+  margin-top: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  opacity: 0;
+  animation: introRise 0.8s ease 2.2s forwards;
+}
+.intro-step {
+  position: relative;
+  font-size: clamp(0.7rem, 2.2vw, 0.92rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.5);
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+.intro-step:not(:last-child)::after {
+  content: '·';
+  position: absolute;
+  right: -0.62rem;
+  color: rgba(148, 163, 184, 0.35);
+}
+.intro-step.on {
+  color: #e2edff;
+  text-shadow: 0 0 16px rgba(96, 165, 250, 0.8);
+}
+
+.intro-greeting {
+  margin-top: 1.6rem;
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  opacity: 0;
+  animation: introRise 0.8s ease 3s forwards;
+}
+
+/* ── Skip ── */
+.intro-skip {
+  position: absolute;
+  bottom: 1.8rem;
+  right: 2rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  animation: introRise 0.6s ease 1s forwards;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.intro-skip:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+
+/* Respect reduced-motion: show a calm static splash instead. */
+@media (prefers-reduced-motion: reduce) {
+  .intro-aurora, .intro-grid, .intro-orbit-scene, .intro-logo-glow, .intro-logo-3d { animation: none; }
+  .intro-wordmark, .intro-journey, .intro-greeting, .intro-skip { animation: none; opacity: 1; transform: none; }
+}

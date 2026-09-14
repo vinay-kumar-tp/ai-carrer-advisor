@@ -40,7 +40,7 @@ export const AssessmentsPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.15))', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.3)' }}>
           <div>
             <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', display: 'block' }}>Verified Full-Stack AI Engineer Standard</span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Issued by AI Career Advisor Platform • Certified Ready for Hiring</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Issued by Carrerpulse Ai Platform • Certified Ready for Hiring</span>
           </div>
           <button className="btn btn-primary">
             Download Credential PDF

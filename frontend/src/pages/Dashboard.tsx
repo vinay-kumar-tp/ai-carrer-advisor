@@ -15,7 +15,7 @@ export const Dashboard: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Welcome back, {user?.full_name || 'Student'}! 👋</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Your AI Career Readiness Score is currently at <strong style={{ color: '#34d399' }}>82% (Job Ready)</strong></p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Your Carrerpulse Ai Career Readiness Score is currently at <strong style={{ color: '#34d399' }}>82% (Job Ready)</strong></p>
           </div>
           <Link to="/position-ai" className="btn btn-primary">
             Run Skill Gap Analysis <ArrowRight size={16} />

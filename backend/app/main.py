@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.db.session import init_db
-from app.api.routers import auth, profile, jobs, codequest, aptitude, personality, documents, interview, events, admin
+from app.api.routers import auth, profile, jobs, codequest, aptitude, personality, documents, interview, events, admin, notifications
 
 
 @asynccontextmanager
@@ -43,6 +43,7 @@ app.include_router(documents.router, prefix="/api/documents", tags=["Documents"]
 app.include_router(interview.router, prefix="/api/interview", tags=["Interview Coach"])
 app.include_router(events.router, prefix="/api/events", tags=["Events"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 
 
 @app.get("/api/health")

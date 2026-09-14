@@ -125,6 +125,7 @@ class Profile(Base):
     industry = Column(String(255), default="")
     expected_ctc = Column(Integer, nullable=True)
     ctc_period = Column(String(20), default="Year")    # Year | Month
+    job_alerts_enabled = Column(Boolean, default=True)  # notify on matching new postings
 
     # ── Program / scholarship details (generic, institution agnostic) ──
     program_name = Column(String(255), default="")
@@ -191,6 +192,42 @@ class JobListing(Base):
     posted_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
+    # ── Portal / employer branding ─────────────────────────────
+    slug = Column(String(200), unique=True, index=True, nullable=True)
+    source_portal = Column(String(60), default="LinkedIn")   # one of the 20 supported portals
+    company_logo = Column(String(500), default="")           # emoji or url used as the avatar
+    company_tagline = Column(String(300), default="")
+    industry = Column(String(120), default="", index=True)
+    employment_mode = Column(String(30), default="In Office")  # In Office | Remote | Hybrid
+    openings = Column(Integer, default=1)
+    application_deadline = Column(String(30), default="")
+
+    # ── Rich job description (each is a list[str] / structured JSON) ──
+    about_company = Column(Text, default="")
+    responsibilities = Column(JSON, default=list)            # list[str]
+    qualifications = Column(JSON, default=list)              # list[str] (nice-to-have / preferred)
+    perks = Column(JSON, default=list)                       # list[str]
+    ctc_breakdown = Column(JSON, default=list)               # [{component, amount}]
+
+    # ── Numeric facets (drive the filters + eligibility) ───────
+    ctc_min = Column(Integer, nullable=True)                 # annual CTC in rupees
+    ctc_max = Column(Integer, nullable=True)
+    stipend_min = Column(Integer, nullable=True)             # monthly stipend in rupees (internships)
+    stipend_max = Column(Integer, nullable=True)
+    experience_min_years = Column(Float, default=0.0)
+    experience_max_years = Column(Float, nullable=True)
+
+    # ── System-checked eligibility criteria ───────────────────
+    # [{key, label, type, ...}] — evaluated against the candidate profile.
+    #   type: min_cgpa | min_experience | max_experience | required_skills |
+    #         allowed_degrees | max_backlogs | location | graduation_year | custom
+    eligibility = Column(JSON, default=list)
+
+    # ── Application form: extra questions the candidate must answer ──
+    # [{key, label, type, required, options?, placeholder?, help?}]
+    #   type: text | textarea | number | select | multiselect | boolean | url | date
+    apply_questions = Column(JSON, default=list)
+
     applications = relationship("Application", back_populates="job", cascade="all, delete-orphan")
 
 
@@ -203,6 +240,12 @@ class Application(Base):
     status = Column(String(30), default=ApplicationStatus.APPLIED)
     resume_id = Column(String(36), nullable=True)
     cover_letter = Column(Text, nullable=True)
+    # Answers to the job's custom apply_questions: {question_key: value}
+    answers = Column(JSON, default=dict)
+    # Snapshot of the auto-filled personal details at the time of applying.
+    profile_snapshot = Column(JSON, default=dict)
+    # Cached eligibility verdict at apply time.
+    eligibility_snapshot = Column(JSON, default=dict)
     applied_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -304,14 +347,40 @@ class MCQQuestion(Base):
     __tablename__ = "mcq_questions"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    slug = Column(String(200), unique=True, index=True, nullable=True)   # stable key for idempotent seeding
     question_text = Column(Text, nullable=False)
     options = Column(JSON, nullable=False)
     correct_index = Column(Integer, nullable=False)
-    topic = Column(String(100), default="general")
-    subtopic = Column(String(100), nullable=True)
+    section = Column(String(30), default="quant", index=True)            # quant | logical | verbal | technical
+    topic = Column(String(120), default="general", index=True)
+    subtopic = Column(String(120), nullable=True)
     difficulty = Column(String(20), default=Difficulty.EASY)
     explanation = Column(Text, nullable=True)
+    points = Column(Integer, default=5)
+    display_order = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class AptitudeProgress(Base):
+    """Per-user progress on a single MCQ (drives coverage + accuracy stats).
+
+    ``first_correct`` records whether the user's FIRST attempt was correct, so
+    accuracy can't be gamed by re-answering (mirrors the reference product).
+    """
+    __tablename__ = "aptitude_progress"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_id = Column(String(36), ForeignKey("mcq_questions.id", ondelete="CASCADE"), nullable=False, index=True)
+    section = Column(String(30), default="quant", index=True)
+    topic = Column(String(120), default="", index=True)
+    subtopic = Column(String(120), default="")
+    attempts = Column(Integer, default=0)
+    first_correct = Column(Boolean, default=False)
+    solved = Column(Boolean, default=False)          # ever answered correctly
+    points_earned = Column(Integer, default=0)
+    last_choice = Column(Integer, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class QuizAttempt(Base):
@@ -347,6 +416,17 @@ class PersonalityResult(Base):
     raw_answers = Column(JSON, default=list)
     completed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # ── Full OCEAN engine (v2) ─────────────────────────────────
+    form = Column(String(20), default="")                    # bfi44 | ipip120
+    total_questions = Column(Integer, default=0)
+    raw_scores = Column(JSON, default=dict)                  # {trait: raw int}
+    percentages = Column(JSON, default=dict)                 # {trait: pct float}
+    levels = Column(JSON, default=dict)                      # {trait: Low|Moderate|High}
+    scores_detail = Column(JSON, default=dict)               # {trait: {raw,min,max,pct,level}}
+    compliance = Column(JSON, default=dict)                  # {status, longest_uniform_run, ...}
+    insights = Column(JSON, default=dict)                    # {key_strengths, ...}
+    completion_time_seconds = Column(Integer, nullable=True)
+
     user = relationship("User", back_populates="personality_result")
 
 
@@ -376,11 +456,15 @@ class InterviewSession(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    mode = Column(String(20), default=InterviewMode.STRUCTURED)
+    mode = Column(String(20), default=InterviewMode.ADAPTIVE)
     job_context = Column(String(255), nullable=True)
+    title = Column(String(255), default="")                 # e.g. "Backend Python Engineer Practice"
+    config = Column(JSON, default=dict)                      # source, difficulty, question_mix, skill ...
     transcript = Column(JSON, default=list)
-    scores = Column(JSON, default=dict)
-    feedback = Column(Text, nullable=True)
+    scores = Column(JSON, default=dict)                      # {overall, response_quality, behavioural, speech}
+    report = Column(JSON, default=dict)                      # full structured performance report
+    feedback = Column(Text, nullable=True)                   # short recruiter summary
+    user_feedback = Column(JSON, default=dict)               # post-interview survey (rating, comments)
     is_completed = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime(timezone=True), nullable=True)

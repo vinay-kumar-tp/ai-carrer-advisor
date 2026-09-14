@@ -15,6 +15,8 @@ interface AuthContextType {
   register: (email: string, password: string, full_name: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  showIntro: boolean;
+  dismissIntro: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
   const [loading, setLoading] = useState<boolean>(false);
+  const [showIntro, setShowIntro] = useState<boolean>(false);
+
+  const dismissIntro = () => setShowIntro(false);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -39,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setToken(access_token);
       setUser(userData);
+      setShowIntro(true);
     } finally {
       setLoading(false);
     }
@@ -56,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setToken(access_token);
       setUser(userData);
+      setShowIntro(true);
     } finally {
       setLoading(false);
     }
@@ -66,10 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+    setShowIntro(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading, showIntro, dismissIntro }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,193 +1,289 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Bot, Send, Award, Sparkles, CheckCircle2 } from 'lucide-react';
+import '../styles/interview.css';
+import { SetupStage } from './interview/SetupStage';
+import { ReadinessModal, DeviceCheckModal } from './interview/PreflightModals';
+import { LiveStage } from './interview/LiveStage';
+import { FeedbackModal } from './interview/FeedbackModal';
+import { ReportStage } from './interview/ReportStage';
+import type {
+  Stage,
+  InterviewConfig,
+  StartPayload,
+  InterviewReport,
+  HistoryItem,
+} from './interview/types';
+
+interface LiveState {
+  sessionId: string;
+  title: string;
+  interviewerName: string;
+  totalQuestions: number;
+  questionNumber: number;
+  question: string;
+  isWarmup: boolean;
+  thinking: boolean;
+}
 
 export const InterviewCoachPage: React.FC = () => {
-  const [session, setSession] = useState<any>(null);
-  const [jobContext, setJobContext] = useState('Full Stack Engineer');
-  const [mode, setMode] = useState('structured');
+  const [stage, setStage] = useState<Stage>('setup');
+  const [config, setConfig] = useState<InterviewConfig | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<StartPayload | null>(null);
   const [starting, setStarting] = useState(false);
-  const [answerText, setAnswerText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleStartSession = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [live, setLive] = useState<LiveState | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [report, setReport] = useState<InterviewReport | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Load setup config once.
+  useEffect(() => {
+    api.get<InterviewConfig>('/interview/config')
+      .then((res) => setConfig(res.data))
+      .catch(() => setError('Could not load interview options. Is the backend running?'));
+  }, []);
+
+  const stopStream = () => {
+    stream?.getTracks().forEach((t) => t.stop());
+    setStream(null);
+  };
+
+  // Setup → open readiness modal (payload held until devices confirmed).
+  const handleSetupStart = (payload: StartPayload) => {
+    setError(null);
+    setPendingPayload(payload);
+    setStage('readiness');
+  };
+
+  // After device check → actually create the session, then go live.
+  const beginSession = async (mediaStream: MediaStream | null) => {
+    if (!pendingPayload) return;
+    setStream(mediaStream);
     setStarting(true);
     try {
-      const res = await api.post('/interview/start', { mode, job_context: jobContext });
-      setSession({
-        id: res.data.session_id,
-        messages: [{ role: 'interviewer', content: res.data.first_question }],
-        completed: false,
-        scores: null
+      const res = await api.post('/interview/start', pendingPayload);
+      const d = res.data;
+      setLive({
+        sessionId: d.session_id,
+        title: d.title,
+        interviewerName: d.interviewer_name,
+        totalQuestions: d.total_questions,
+        questionNumber: d.question_number,
+        question: d.question,
+        isWarmup: d.is_warmup,
+        thinking: false,
       });
-    } catch (err) {
-      console.error(err);
+      setStage('live');
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || 'Could not start the interview.');
+      setStage('setup');
+      mediaStream?.getTracks().forEach((t) => t.stop());
+      setStream(null);
     } finally {
       setStarting(false);
     }
   };
 
-  const handleSendAnswer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!answerText.trim() || !session) return;
-    setSubmitting(true);
+  // Candidate submitted an answer → post it, advance or finish.
+  const handleAnswer = async (answerText: string) => {
+    if (!live) return;
+    setLive({ ...live, thinking: true });
     try {
-      const updatedMessages = [...session.messages, { role: 'candidate', content: answerText }];
-      setSession({ ...session, messages: updatedMessages });
-      const currentAns = answerText;
-      setAnswerText('');
-
-      const res = await api.post(`/interview/${session.id}/answer`, { answer_text: currentAns });
-
-      if (res.data.completed) {
-        setSession({
-          ...session,
-          completed: true,
-          scores: res.data.scores,
-          feedback: res.data.feedback,
-          messages: res.data.transcript || updatedMessages
-        });
+      const res = await api.post(`/interview/${live.sessionId}/turn`, { answer_text: answerText });
+      const d = res.data;
+      if (d.completed) {
+        setReport(d.report as InterviewReport);
+        stopStream();
+        setStage('feedback');
       } else {
-        setSession({
-          ...session,
-          messages: [...updatedMessages, { role: 'interviewer', content: res.data.next_question }]
+        setLive({
+          sessionId: live.sessionId,
+          title: live.title,
+          interviewerName: live.interviewerName,
+          totalQuestions: d.total_questions,
+          questionNumber: d.question_number,
+          question: d.question,
+          isWarmup: d.is_warmup,
+          thinking: false,
         });
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
+    } catch (e: any) {
+      // On failure, surface the report if the session actually finished; else recover.
+      setError(e?.response?.data?.detail || 'Something went wrong. Try ending and reviewing your report.');
+      setLive({ ...live, thinking: false });
     }
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '850px', margin: '0 auto' }}>
-      <div>
-        <h2>AI Interview Coach — Mock Practice Engine</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Practice technical and STAR behavioral interview questions with turn-by-turn AI evaluation.</p>
-      </div>
+  // End button during the interview → try to fetch a partial report.
+  const handleEndInterview = async () => {
+    stopStream();
+    if (!live) {
+      setStage('setup');
+      return;
+    }
+    setStage('feedback');
+  };
 
-      {!session ? (
-        <div className="glass-card">
-          <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Bot color="var(--accent-purple)" /> Configure Mock Interview Session
-          </h3>
+  const submitFeedback = async (data: any) => {
+    if (report) {
+      try {
+        await api.post(`/interview/${report.session_id}/feedback`, data);
+      } catch { /* non-blocking */ }
+    }
+    goToReport();
+  };
 
-          <form onSubmit={handleStartSession} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div>
-              <label className="label">Target Role / Context</label>
-              <input type="text" className="input-field" value={jobContext} onChange={(e) => setJobContext(e.target.value)} placeholder="e.g. Frontend React Developer, Backend Engineer" required />
-            </div>
+  const goToReport = async () => {
+    // Ensure we have a report (in case the user ended early).
+    if (!report && live) {
+      try {
+        const res = await api.get(`/interview/${live.sessionId}/report`);
+        setReport(res.data as InterviewReport);
+      } catch {
+        setStage('setup');
+        return;
+      }
+    }
+    setStage('report');
+  };
 
-            <div>
-              <label className="label">Interview Engine Mode</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div
-                  onClick={() => setMode('structured')}
-                  style={{
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    background: mode === 'structured' ? 'rgba(99,102,241,0.2)' : 'rgba(10,13,20,0.5)',
-                    border: mode === 'structured' ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Structured Mode</strong>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Standard rubric of core behavioral and technical questions.</span>
-                </div>
+  const resetToSetup = () => {
+    stopStream();
+    setLive(null);
+    setReport(null);
+    setPendingPayload(null);
+    setError(null);
+    setStage('setup');
+  };
 
-                <div
-                  onClick={() => setMode('adaptive')}
-                  style={{
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    background: mode === 'adaptive' ? 'rgba(139,92,246,0.2)' : 'rgba(10,13,20,0.5)',
-                    border: mode === 'adaptive' ? '1px solid var(--accent-purple)' : '1px solid var(--border-color)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Adaptive AI Mode</strong>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>LLM dynamically asks follow-up questions based on your answers.</span>
-                </div>
-              </div>
-            </div>
+  const startSameInterview = () => {
+    if (report && pendingPayload) {
+      setReport(null);
+      setLive(null);
+      setStage('readiness');
+    } else {
+      resetToSetup();
+    }
+  };
 
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={starting}>
-              <Sparkles size={16} /> {starting ? 'Initializing AI Interviewer...' : 'Start Interview Session'}
-            </button>
-          </form>
+  const openHistory = async () => {
+    try {
+      const res = await api.get<HistoryItem[]>('/interview/history');
+      setHistory(res.data);
+      setShowHistory(true);
+    } catch { /* ignore */ }
+  };
+
+  const openHistoryReport = async (item: HistoryItem) => {
+    if (!item.is_completed) return;
+    try {
+      const res = await api.get(`/interview/${item.id}/report`);
+      setReport(res.data as InterviewReport);
+      setShowHistory(false);
+      setStage('report');
+    } catch { /* ignore */ }
+  };
+
+  if (!config && stage === 'setup') {
+    return (
+      <div className="iv-wrap">
+        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem' }}>
+          {error ? <p style={{ color: '#fca5a5' }}>{error}</p> : <p>Loading interview studio…</p>}
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Chat Transcript Area */}
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '380px', maxHeight: '500px', overflowY: 'auto', padding: '1.5rem' }}>
-            {session.messages.map((m: any, i: number) => (
-              <div
-                key={i}
-                style={{
-                  alignSelf: m.role === 'interviewer' ? 'flex-start' : 'flex-end',
-                  maxWidth: '75%',
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  background: m.role === 'interviewer' ? 'rgba(18,24,38,0.9)' : 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
-                  border: m.role === 'interviewer' ? '1px solid var(--border-color)' : 'none',
-                  color: 'white',
-                  fontSize: '0.9rem',
-                  lineHeight: '1.5'
-                }}
-              >
-                <strong style={{ display: 'block', fontSize: '0.75rem', color: m.role === 'interviewer' ? 'var(--accent-secondary)' : '#e0e7ff', marginBottom: '0.35rem', textTransform: 'capitalize' }}>
-                  {m.role}
-                </strong>
-                {m.content}
-              </div>
-            ))}
-          </div>
+      </div>
+    );
+  }
 
-          {session.completed ? (
-            <div className="glass-card" style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16,185,129,0.15)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                <Award size={28} />
-              </div>
-              <h3>Interview Complete!</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem', marginBottom: '1.5rem' }}>{session.feedback}</p>
+  return (
+    <>
+      {stage === 'setup' && config && (
+        <SetupStage
+          config={config}
+          starting={starting}
+          error={error}
+          onStart={handleSetupStart}
+          onViewAttempts={openHistory}
+        />
+      )}
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Communication</span>
-                  <h3 style={{ color: '#34d399' }}>{session.scores?.communication}%</h3>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Technical Depth</span>
-                  <h3 style={{ color: '#818cf8' }}>{session.scores?.technical_depth}%</h3>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Overall Score</span>
-                  <h3 style={{ color: '#a78bfa' }}>{session.scores?.overall}%</h3>
-                </div>
-              </div>
-
-              <button onClick={() => setSession(null)} className="btn btn-primary">Start New Interview</button>
-            </div>
-          ) : (
-            <form onSubmit={handleSendAnswer} style={{ display: 'flex', gap: '0.75rem' }}>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Type your response here..."
-                value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
-                disabled={submitting}
-                required
-              />
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                <Send size={16} /> Send
-              </button>
-            </form>
+      {stage === 'readiness' && (
+        <>
+          {/* keep setup visible behind the modal */}
+          {config && (
+            <SetupStage config={config} starting={starting} error={null} onStart={() => {}} onViewAttempts={() => {}} />
           )}
+          <ReadinessModal onClose={resetToSetup} onContinue={() => setStage('device-check')} />
+        </>
+      )}
+
+      {stage === 'device-check' && (
+        <>
+          {config && (
+            <SetupStage config={config} starting={starting} error={null} onStart={() => {}} onViewAttempts={() => {}} />
+          )}
+          <DeviceCheckModal onCancel={resetToSetup} onStart={beginSession} />
+        </>
+      )}
+
+      {stage === 'live' && live && (
+        <LiveStage
+          title={live.title}
+          interviewerName={live.interviewerName}
+          questionNumber={live.questionNumber}
+          totalQuestions={live.totalQuestions}
+          question={live.question}
+          isWarmup={live.isWarmup}
+          thinking={live.thinking}
+          stream={stream}
+          onSubmit={handleAnswer}
+          onEnd={handleEndInterview}
+        />
+      )}
+
+      {stage === 'feedback' && (
+        <FeedbackModal onSkip={goToReport} onSubmit={submitFeedback} />
+      )}
+
+      {stage === 'report' && report && (
+        <ReportStage report={report} onPracticeAgain={resetToSetup} onStartSame={startSameInterview} />
+      )}
+
+      {/* History drawer */}
+      {showHistory && (
+        <div className="iv-modal-overlay" onClick={() => setShowHistory(false)}>
+          <div className="iv-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginTop: 0 }}>My Interview Attempts</h2>
+            {history.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>No attempts yet. Start your first mock interview.</p>
+            ) : (
+              <div className="iv-mini-history">
+                {history.map((h) => (
+                  <div key={h.id} className="iv-history-row" onClick={() => openHistoryReport(h)}>
+                    <div>
+                      <strong>{h.title}</strong>
+                      <div className="iv-hint">
+                        {h.created_at ? new Date(h.created_at).toLocaleDateString() : ''} · {h.difficulty || 'mixed'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {h.is_completed ? (
+                        <strong>{h.overall_score ?? '—'}/100</strong>
+                      ) : (
+                        <span className="iv-hint">Incomplete</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="iv-modal-actions">
+              <button className="btn" onClick={() => setShowHistory(false)}>Close</button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

@@ -1,0 +1,157 @@
+/* ─── Aptitude Quest studio ─────────────────────────────────────── */
+
+.aq { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Hero */
+.aq-hero {
+  background: linear-gradient(135deg, rgba(59,130,246,0.16), rgba(168,85,247,0.12));
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+}
+.aq-hero-head { display: flex; align-items: center; gap: 1rem; }
+.aq-hero-badge {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  background: rgba(59,130,246,0.2); color: #60a5fa;
+  display: flex; align-items: center; justify-content: center;
+}
+.aq-hero h1 { margin: 0; font-size: 1.5rem; }
+.aq-hero p { margin: 0.25rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+/* Tabs */
+.aq-tabs { display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+.aq-tab {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.55rem 1rem; border-radius: 999px; cursor: pointer;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-color);
+  color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+}
+.aq-tab.is-active { background: rgba(99,102,241,0.2); border-color: var(--accent-primary); color: #fff; }
+
+/* Section filter chips */
+.aq-filter-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.aq-chip {
+  padding: 0.4rem 0.9rem; border-radius: 999px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); color: var(--text-muted);
+}
+.aq-chip.is-active { color: #fff; }
+.aq-chip.q.is-active { background: rgba(59,130,246,0.2); border-color: #3b82f6; }
+.aq-chip.l.is-active { background: rgba(245,158,11,0.2); border-color: #f59e0b; }
+.aq-chip.v.is-active { background: rgba(16,185,129,0.2); border-color: #10b981; }
+.aq-chip.t.is-active { background: rgba(168,85,247,0.2); border-color: #a855f7; }
+.aq-chip.all.is-active { background: rgba(99,102,241,0.2); border-color: var(--accent-primary); }
+
+.aq-search {
+  display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 220px;
+  background: rgba(10,13,20,0.5); border: 1px solid var(--border-color); border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+}
+.aq-search input { flex: 1; background: none; border: none; outline: none; color: var(--text-primary, #fff); font-size: 0.9rem; }
+
+/* Topic grid */
+.aq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.aq-card {
+  background: var(--card-bg, #10141f); border: 1px solid var(--border-color);
+  border-radius: 14px; padding: 1.1rem 1.25rem; border-top: 3px solid var(--tint, #3b82f6);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.aq-card-head { display: flex; align-items: center; gap: 0.6rem; }
+.aq-card-icon {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; font-size: 1.05rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.06);
+}
+.aq-card h3 { margin: 0; font-size: 1rem; }
+.aq-card-meta { font-size: 0.78rem; color: var(--text-muted); }
+.aq-card-blurb { font-size: 0.82rem; color: var(--text-muted); min-height: 2.2em; }
+.aq-progress-line { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.aq-progress-fill { height: 100%; border-radius: 3px; background: var(--tint, #3b82f6); }
+.aq-card-actions { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.35rem; }
+.aq-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.95rem; border-radius: 9px;
+  border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover));
+}
+.aq-btn.ghost { background: none; color: var(--accent-secondary); border: 1px solid var(--border-color); }
+.aq-link { background: none; border: none; color: var(--accent-secondary); cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+
+/* Subtopic picker popover */
+.aq-subs { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-color); }
+.aq-sub-row {
+  display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.6rem;
+  border-radius: 8px; cursor: pointer; font-size: 0.82rem; border: 1px solid transparent;
+}
+.aq-sub-row:hover { background: rgba(255,255,255,0.05); border-color: var(--border-color); }
+.aq-sub-count { font-size: 0.72rem; color: var(--text-muted); }
+
+.aq-section-title { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0.25rem; font-size: 0.95rem; font-weight: 700; }
+.aq-section-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Practice runner ── */
+.aq-runner { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
+.aq-runner-head { display: flex; justify-content: space-between; align-items: center; }
+.aq-runner-head h2 { margin: 0; font-size: 1.2rem; }
+.aq-progress-pills { display: flex; gap: 4px; }
+.aq-pip { width: 22px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); }
+.aq-pip.ok { background: #34d399; }
+.aq-pip.bad { background: #ef4444; }
+.aq-pip.cur { background: var(--accent-primary); }
+
+.aq-qcard { background: var(--card-bg, #10141f); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; }
+.aq-qmeta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.aq-tag { font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 999px; background: rgba(99,102,241,0.18); color: #a5b4fc; }
+.aq-qtext { font-size: 1.1rem; line-height: 1.55; margin-bottom: 1.25rem; }
+.aq-opts { display: flex; flex-direction: column; gap: 0.6rem; }
+.aq-opt {
+  padding: 0.85rem 1rem; border-radius: 10px; cursor: pointer; font-size: 0.92rem;
+  background: rgba(10,13,20,0.5); border: 1px solid var(--border-color); transition: all 0.12s ease;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.aq-opt:hover:not(.locked) { border-color: var(--accent-primary); }
+.aq-opt.sel { border-color: var(--accent-primary); background: rgba(99,102,241,0.15); }
+.aq-opt.correct { border-color: #34d399; background: rgba(16,185,129,0.15); }
+.aq-opt.wrong { border-color: #ef4444; background: rgba(239,68,68,0.12); }
+.aq-opt.locked { cursor: default; }
+.aq-opt-key { font-weight: 700; opacity: 0.7; }
+.aq-opt-mark { margin-left: auto; }
+
+.aq-explain { margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 10px; font-size: 0.86rem; border-left: 3px solid; }
+.aq-explain.ok { background: rgba(16,185,129,0.08); border-color: #34d399; }
+.aq-explain.bad { background: rgba(239,68,68,0.07); border-color: #ef4444; }
+.aq-explain strong { display: block; margin-bottom: 0.25rem; }
+
+.aq-runner-foot { display: flex; justify-content: space-between; align-items: center; }
+.aq-score { font-size: 0.85rem; color: var(--text-muted); }
+.aq-score b { color: #34d399; }
+
+/* Summary */
+.aq-summary { text-align: center; padding: 2.5rem 1.5rem; }
+.aq-summary-score { font-size: 3rem; font-weight: 800; }
+
+/* ── Progress tab ── */
+.aq-prog-grid { display: grid; grid-template-columns: 260px 1fr; gap: 1.25rem; align-items: start; }
+@media (max-width: 760px) { .aq-prog-grid { grid-template-columns: 1fr; } }
+.aq-gauge { text-align: center; padding: 1.5rem; }
+.aq-gauge-num { font-size: 3rem; font-weight: 800; line-height: 1; }
+.aq-gauge-den { color: var(--text-muted); }
+.aq-gauge-label { margin-top: 0.4rem; font-size: 0.85rem; color: var(--text-muted); }
+
+.aq-stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+.aq-stat { }
+.aq-stat b { display: block; font-size: 1.4rem; }
+.aq-stat span { font-size: 0.75rem; color: var(--text-muted); }
+
+.aq-sec-bar { padding: 0.85rem 0; border-bottom: 1px solid var(--border-color); }
+.aq-sec-bar:last-child { border-bottom: none; }
+.aq-sec-bar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.aq-sec-bar-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+.aq-bar-track { height: 8px; border-radius: 5px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.aq-bar-fill { height: 100%; border-radius: 5px; }
+.aq-sec-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+/* ── Leaderboard ── */
+.aq-lb-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); }
+.aq-lb-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; background: rgba(255,255,255,0.06); }
+.aq-lb-rank.top { background: rgba(245,158,11,0.2); color: #fbbf24; }
+.aq-lb-name { flex: 1; font-weight: 600; font-size: 0.9rem; }
+.aq-lb-xp { font-size: 0.85rem; color: var(--accent-secondary); font-weight: 600; }

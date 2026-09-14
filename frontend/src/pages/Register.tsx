@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Sparkles } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
+import { BrandMark } from '../components/BrandLogo';
 
 export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -26,10 +27,10 @@ export const Register: React.FC = () => {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at top right, rgba(99,102,241,0.15), transparent 40%), radial-gradient(circle at bottom left, rgba(6,182,212,0.15), transparent 40%)' }}>
       <div className="glass-card" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
-            <Sparkles size={28} color="white" />
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <BrandMark size={64} />
           </div>
-          <h2>Join AI Career Advisor</h2>
+          <h2>Join Carrerpulse Ai</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Build your future with personalized AI coaching</p>
         </div>
 
@@ -42,7 +43,7 @@ export const Register: React.FC = () => {
           </div>
           <div>
             <label className="label">Email Address</label>
-            <input type="email" className="input-field" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="student@careeradvisor.ai" required />
+            <input type="email" className="input-field" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@carrerpulse.ai" required />
           </div>
           <div>
             <label className="label">Password</label>
