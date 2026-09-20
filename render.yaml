@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: ai-career-advisor-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS_RAW
+        # Update after the frontend is deployed, e.g.:
+        # https://your-app.vercel.app,https://your-custom-domain.com
+        value: "http://localhost:5173"
+      - key: DATABASE_URL
+        value: "sqlite+aiosqlite:///./career_advisor.db"
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "meta-llama/llama-3.3-70b-instruct"
+      - key: GEMINI_API_KEY
+        sync: false
