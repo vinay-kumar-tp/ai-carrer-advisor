@@ -62,7 +62,9 @@ def _strip_code_fences(text: str) -> str:
 def _gemini_extract(payload: dict) -> str:
     try:
         parts = (payload.get("candidates") or [])[0]["content"]["parts"]
-        return "".join(p.get("text", "") for p in parts).strip()
+        # Skip internal "thinking" parts (Gemini 2.5/3 emit these with
+        # thought:true) — only real answer text has a usable value.
+        return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
     except (KeyError, IndexError, TypeError):
         return ""
 
@@ -72,7 +74,15 @@ async def _gemini_call(
 ) -> Optional[str]:
     body: dict[str, Any] = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
+        "generationConfig": {
+            "temperature": temperature,
+            # Current Flash models count internal "thinking" tokens against
+            # maxOutputTokens, which can consume the whole budget and return
+            # empty text. Give headroom AND disable thinking for these short,
+            # non-reasoning calls so the model spends tokens on the answer.
+            "maxOutputTokens": max(max_tokens, 512),
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
     }
     if system:
         body["systemInstruction"] = {"parts": [{"text": system}]}
@@ -82,6 +92,10 @@ async def _gemini_call(
     url = f"{_GEMINI_BASE}/{_GEMINI_MODEL}:generateContent"
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.post(url, params={"key": settings.GEMINI_API_KEY}, json=body)
+        # Older models reject thinkingConfig with a 400 — retry once without it.
+        if resp.status_code == 400 and "thinkingConfig" in body["generationConfig"]:
+            body["generationConfig"].pop("thinkingConfig", None)
+            resp = await client.post(url, params={"key": settings.GEMINI_API_KEY}, json=body)
         resp.raise_for_status()
         return _gemini_extract(resp.json()) or None
 
