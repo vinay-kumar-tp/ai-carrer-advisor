@@ -160,13 +160,16 @@ export const LiveStage: React.FC<Props> = ({
     stopTimer();
     stopRecognizer();
     stopSpeaking();
-    const spoken = answerRef.current.trim();
+    // Prefer the ref (has the very latest interim words), fall back to the
+    // transcript state — either way the spoken answer is captured.
+    const spoken = (answerRef.current || transcript).trim();
     const written = typed.trim();
     const finalAnswer = [spoken, written].filter(Boolean).join(' ').trim();
+    if (!finalAnswer) return; // nothing to send — guard against empty submit
     setPhase('sending');
     onSubmit(finalAnswer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onSubmit, typed]);
+  }, [onSubmit, typed, transcript]);
 
   const handleJoin = () => {
     // Kick the flow off explicitly from a user gesture (needed for autoplay/mic).
@@ -219,7 +222,10 @@ export const LiveStage: React.FC<Props> = ({
   else if (isSending) statusChip = 'Reflecting on your response';
   else if (isSpeaking) statusChip = `${interviewerName} is speaking`;
 
-  const canSubmit = (answerRef.current.trim().length + typed.trim().length) > 0;
+  // Base this on `transcript` STATE (not the ref) so voice capture re-enables
+  // the send button — refs don't trigger re-renders, which is why spoken
+  // answers previously left the button disabled.
+  const canSubmit = (transcript.trim().length + typed.trim().length) > 0;
 
   return (
     <div className="iv-stage">

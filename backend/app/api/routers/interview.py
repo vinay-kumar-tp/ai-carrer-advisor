@@ -100,6 +100,7 @@ async def start_interview(
         "resume_id": data.resume_id,
         "difficulty": data.difficulty,
         "question_mix": data.question_mix,
+        "num_questions": data.num_questions,
     }
 
     # Basic validation so the interviewer has something to anchor on.
@@ -130,7 +131,7 @@ async def start_interview(
         "session_id": str(session.id),
         "title": session.title,
         "interviewer_name": engine.INTERVIEWER_NAME,
-        "total_questions": engine.DEFAULT_TOTAL_QUESTIONS,
+        "total_questions": engine.total_questions_for(config),
         "question_number": 1,
         "question": opening,
         "is_warmup": True,
@@ -164,9 +165,10 @@ async def take_turn(
     transcript.append(_turn("candidate", (data.answer_text or "").strip()))
 
     answered = _scored_answers(transcript)  # scored answers captured so far
+    total = engine.total_questions_for(config)
 
     # Finished: warm-up + all scored questions answered → grade the session.
-    if answered >= engine.DEFAULT_TOTAL_QUESTIONS:
+    if answered >= total:
         return await _finish(session, config, transcript, user_id, db)
 
     # Otherwise ask the next adaptive question.
@@ -179,7 +181,7 @@ async def take_turn(
         "completed": False,
         "question": next_line,
         "question_number": answered + 2,  # +1 warm-up, +1 for 1-based display
-        "total_questions": engine.DEFAULT_TOTAL_QUESTIONS,
+        "total_questions": total,
         "is_warmup": False,
     }
 

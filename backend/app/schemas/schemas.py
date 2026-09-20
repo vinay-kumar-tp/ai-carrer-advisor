@@ -350,6 +350,9 @@ class InterviewStartRequest(BaseModel):
     resume_id: Optional[str] = None
     difficulty: str = "mixed"                # mixed | easy | medium | hard
     question_mix: str = "technical_behavioral"  # technical_behavioral | behavioral
+    # Optional custom interview length (scored questions). Clamped 3–20 server
+    # side; omitted → engine default.
+    num_questions: Optional[int] = None
     # Legacy field kept so older callers don't break.
     mode: str = "adaptive"
 

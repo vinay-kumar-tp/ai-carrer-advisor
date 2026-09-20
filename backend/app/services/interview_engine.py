@@ -68,7 +68,21 @@ QUESTION_MIXES = ["technical_behavioral", "behavioral"]
 INTERVIEWER_NAME = "Arjun"
 
 # How many *scored* questions before we wrap up (Q1 is an unscored warm-up).
-DEFAULT_TOTAL_QUESTIONS = 5
+DEFAULT_TOTAL_QUESTIONS = 8
+# Bounds when a caller requests a custom length.
+MIN_TOTAL_QUESTIONS = 3
+MAX_TOTAL_QUESTIONS = 20
+
+
+def total_questions_for(config: dict) -> int:
+    """Resolve how many scored questions this session runs, honouring an
+    optional per-session override while staying within sane bounds."""
+    raw = (config or {}).get("num_questions")
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_TOTAL_QUESTIONS
+    return max(MIN_TOTAL_QUESTIONS, min(MAX_TOTAL_QUESTIONS, n))
 
 
 # ─── Setup helpers ───────────────────────────────────────────────
@@ -172,10 +186,11 @@ async def _ai_next_turn(config: dict, transcript: list[dict], turn_index: int) -
         f"{'Interviewer' if m['role'] == 'interviewer' else 'Candidate'}: {m['content']}"
         for m in transcript
     )
-    remaining = max(DEFAULT_TOTAL_QUESTIONS - turn_index, 0)
+    total = total_questions_for(config)
+    remaining = max(total - turn_index, 0)
     prompt = (
         f"{convo}\n\n"
-        f"This is question {turn_index + 1} of {DEFAULT_TOTAL_QUESTIONS} "
+        f"This is question {turn_index + 1} of {total} "
         f"({remaining} left after this). "
         "Respond ONLY with your next spoken line as the interviewer (no labels, no quotes). "
         "React to the candidate's last answer, then ask exactly one question."
