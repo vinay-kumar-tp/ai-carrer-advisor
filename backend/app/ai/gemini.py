@@ -28,7 +28,9 @@ from app.core.config import settings
 _TIMEOUT = httpx.Timeout(45.0, connect=10.0)
 
 # ── Gemini ──
-_GEMINI_MODEL = "gemini-2.0-flash"
+# Overridable via the GEMINI_MODEL env var so a Google model rename can be
+# fixed from the dashboard without a code change / redeploy.
+_GEMINI_MODEL = settings.GEMINI_MODEL
 _GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 # ── OpenRouter (OpenAI-compatible) ──

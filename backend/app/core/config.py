@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     # If OPENROUTER_API_KEY is set it takes precedence; otherwise Gemini is used;
     # otherwise the app falls back to deterministic local heuristics.
     GEMINI_API_KEY: Optional[str] = None
+    # Google occasionally retires model names; keep this overridable via env.
+    GEMINI_MODEL: str = "gemini-flash-latest"
     OPENROUTER_API_KEY: Optional[str] = None
     OPENROUTER_MODEL: str = "meta-llama/llama-3.3-70b-instruct"
 
