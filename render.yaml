@@ -20,6 +20,9 @@ services:
         value: "http://localhost:5173"
       - key: DATABASE_URL
         value: "sqlite+aiosqlite:///./career_advisor.db"
+      # Free tier has no shell + ephemeral disk, so let the app seed itself.
+      - key: SEED_ON_STARTUP
+        value: "True"
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL

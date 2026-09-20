@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 10
 
+    # When True, the app seeds its catalog + demo users on startup. Handy on
+    # hosts with ephemeral disks (free tiers) where there's no shell to run the
+    # seed scripts manually. All seeds are idempotent, so this is safe to leave
+    # on. Off by default so local runs don't seed unexpectedly.
+    SEED_ON_STARTUP: bool = False
+
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -10,6 +10,9 @@ from app.api.routers import auth, profile, jobs, codequest, aptitude, personalit
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
+    if settings.SEED_ON_STARTUP:
+        from app.core.startup_seed import run_startup_seed
+        await run_startup_seed()
     print(f"[INFO] {settings.APP_NAME} v{settings.APP_VERSION} started (debug={settings.DEBUG})")
     yield
     # Shutdown
