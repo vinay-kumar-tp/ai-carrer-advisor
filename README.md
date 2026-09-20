@@ -101,7 +101,6 @@ ai-career-advisor/
 │   │   ├── pages/               # 14 Full Module Pages
 │   │   │   ├── Dashboard.tsx        # Module 1: Home Dashboard & XP Stats
 │   │   │   ├── Profile.tsx          # Module 2: My Profile & Skills
-│   │   │   ├── VideoResume.tsx      # Module 3: Video Resume Pitch
 │   │   │   ├── CodeQuest.tsx        # Module 4: Code Quest Online Judge
 │   │   │   ├── AptitudeQuest.tsx    # Module 5: Aptitude MCQ Quizzes
 │   │   │   ├── PersonalityTest.tsx  # Module 6: Big Five OCEAN Test

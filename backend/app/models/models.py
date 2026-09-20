@@ -487,6 +487,54 @@ class Event(Base):
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # ── Identity / idempotent seeding ──────────────────────────
+    slug = Column(String(200), unique=True, index=True, nullable=True)
+
+    # ── Host / employer branding ───────────────────────────────
+    host_company = Column(String(255), default="")
+    host_domain = Column(String(255), default="")      # drives the real logo lookup
+    host_logo = Column(String(500), default="")        # emoji fallback when the logo 404s
+    host_tagline = Column(String(300), default="")
+
+    # ── Classification (drives the filter tabs + facets) ───────
+    #   hackathon | webinar | workshop | career_fair | bootcamp | tech_talk |
+    #   ama | contest | info_session | diversity | ideathon | certification |
+    #   mock_interview | conference | internship_drive
+    event_type = Column(String(40), default="webinar", index=True)
+    mode = Column(String(20), default="Online")        # Online | In Person | Hybrid
+    venue = Column(String(300), default="")            # physical address for in-person
+    city = Column(String(120), default="")
+    tags = Column(JSON, default=list)                  # list[str]
+
+    # ── Schedule ───────────────────────────────────────────────
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    timezone_label = Column(String(60), default="IST")
+    duration_minutes = Column(Integer, nullable=True)
+    registration_deadline = Column(DateTime(timezone=True), nullable=True)
+
+    # ── Commercials & seats ────────────────────────────────────
+    price = Column(Integer, default=0)                 # 0 == free
+    currency = Column(String(10), default="INR")
+    is_certified = Column(Boolean, default=False)      # issues a certificate
+
+    # ── Rich detail (each a list[str] / structured JSON) ───────
+    about = Column(Text, default="")
+    agenda = Column(JSON, default=list)                # [{time, title, detail}]
+    speakers = Column(JSON, default=list)             # [{name, title, company}]
+    prizes = Column(JSON, default=list)               # list[str]
+    perks = Column(JSON, default=list)                # list[str]
+    eligibility = Column(JSON, default=list)          # list[str] (human-readable)
+
+    # ── Registration form ──────────────────────────────────────
+    # [{key, label, type, required, options?, placeholder?, help?}]
+    #   type: text | textarea | number | select | multiselect | boolean | url | date
+    registration_questions = Column(JSON, default=list)
+
+    is_active = Column(Boolean, default=True)
+    is_featured = Column(Boolean, default=False)
+
+    registrations = relationship("EventRegistration", back_populates="event", cascade="all, delete-orphan")
+
 
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
@@ -495,6 +543,16 @@ class EventRegistration(Base):
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     event_id = Column(String(36), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
     registered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Answers to the event's registration_questions: {question_key: value}
+    answers = Column(JSON, default=dict)
+    # Snapshot of the attendee details captured at registration time.
+    profile_snapshot = Column(JSON, default=dict)
+    status = Column(String(20), default="registered")   # registered | waitlisted | cancelled
+    ticket_code = Column(String(40), default="")
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    event = relationship("Event", back_populates="registrations")
 
 
 # ─── Gamification ────────────────────────────────────────────────

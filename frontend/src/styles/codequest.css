@@ -6,31 +6,35 @@
    ============================================================ */
 
 .cq {
-  --cq-canvas: #eef1f8;
-  --cq-card: #ffffff;
-  --cq-border: #e4e9f4;
-  --cq-shadow: 0 1px 3px rgba(31, 41, 55, 0.06), 0 1px 2px rgba(31, 41, 55, 0.04);
-  --cq-shadow-lg: 0 10px 30px rgba(31, 41, 55, 0.12);
+  /* Derived from the global theme tokens so Code Quest flips with
+     light/dark instead of being a permanently-light island. */
+  --cq-canvas: var(--bg-secondary);
+  --cq-card: var(--card-bg);
+  --cq-border: var(--border-color);
+  --cq-shadow: var(--shadow-card);
+  --cq-shadow-lg: var(--shadow-card-hover);
 
-  --cq-ink: #1f2937;
-  --cq-ink-soft: #4b5563;
-  --cq-label: #8090c4;
-  --cq-muted: #94a3b8;
+  --cq-ink: var(--text-strong);
+  --cq-ink-soft: var(--text-main);
+  --cq-label: var(--text-muted);
+  --cq-muted: var(--text-dim);
 
-  --cq-accent: #f0921f;
-  --cq-accent-dark: #d97a09;
-  --cq-accent-soft: #fff4e5;
-  --cq-accent-border: #f7c48a;
+  --cq-accent: var(--accent-primary);
+  --cq-accent-dark: var(--accent-primary-hover);
+  --cq-accent-soft: var(--accent-primary-soft);
+  --cq-accent-border: var(--border-strong);
 
-  --cq-blue-soft: #eef2fb;
-  --cq-blue-border: #dbe3f5;
+  --cq-blue-soft: var(--surface-sunken);
+  --cq-blue-border: var(--border-color);
 
+  /* Difficulty colours stay literal (they carry meaning); the soft fills are
+     translucent so they read correctly on both light and dark canvases. */
   --cq-easy: #16a34a;
-  --cq-easy-soft: #e7f8ee;
+  --cq-easy-soft: rgba(22, 163, 74, 0.14);
   --cq-medium: #d97706;
-  --cq-medium-soft: #fff5e6;
+  --cq-medium-soft: rgba(217, 119, 6, 0.14);
   --cq-hard: #dc2626;
-  --cq-hard-soft: #fdeeee;
+  --cq-hard-soft: rgba(220, 38, 38, 0.14);
 
   --cq-editor-bg: #10182b;
   --cq-editor-line: #1c2740;
@@ -62,7 +66,7 @@
 /* ── Hero banner + tabs ──────────────────────────────────── */
 
 .cq-hero {
-  background: linear-gradient(103deg, #f5a02a 0%, #ef8b1e 48%, #e8801a 100%);
+  background: linear-gradient(103deg, var(--accent-primary) 0%, var(--accent-purple) 52%, var(--accent-pink) 100%);
   padding: 1.5rem 2rem 0;
   position: relative;
   overflow: hidden;
@@ -91,11 +95,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--text-on-accent);
   flex-shrink: 0;
 }
 
-.cq-hero h1 { color: #fff; font-size: 1.55rem; font-weight: 700; }
+.cq-hero h1 { color: var(--text-on-accent); font-size: 1.55rem; font-weight: 700; }
 
 .cq-hero p {
   color: rgba(255, 255, 255, 0.92);
@@ -123,7 +127,7 @@
   padding: 0.65rem 1.15rem;
   border: none;
   background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  color: var(--text-on-accent);
   border-radius: 9px 9px 0 0;
   font-size: 0.86rem;
   font-weight: 600;
@@ -226,11 +230,11 @@
 }
 
 .cq-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.cq-btn-primary { background: var(--cq-accent); color: #fff; }
+.cq-btn-primary { background: var(--cq-accent); color: var(--text-on-accent); }
 .cq-btn-primary:hover:not(:disabled) { background: var(--cq-accent-dark); }
 .cq-btn-outline { background: var(--cq-card); border-color: var(--cq-accent-border); color: var(--cq-accent-dark); }
 .cq-btn-outline:hover:not(:disabled) { background: var(--cq-accent-soft); }
-.cq-btn-ghost { background: var(--cq-card); border-color: var(--cq-blue-border); color: #475569; }
+.cq-btn-ghost { background: var(--cq-card); border-color: var(--cq-blue-border); color: var(--cq-ink-soft); }
 .cq-btn-ghost:hover:not(:disabled) { background: var(--cq-blue-soft); color: var(--cq-ink); }
 .cq-btn-sm { padding: 0.35rem 0.7rem; font-size: 0.76rem; }
 .cq-btn-link {
@@ -240,7 +244,7 @@
 .cq-btn-link:hover { color: var(--cq-accent-dark); text-decoration: underline; }
 .cq-btn-run { background: #1f2937; color: #fff; }
 .cq-btn-run:hover:not(:disabled) { background: #111827; }
-.cq-btn-submit { background: #16a34a; color: #fff; }
+.cq-btn-submit { background: #16a34a; color: var(--text-on-accent); }
 .cq-btn-submit:hover:not(:disabled) { background: #15803d; }
 
 /* ── Filter bar ──────────────────────────────────────────── */
@@ -254,7 +258,7 @@
   border: 1px solid #d9e0ee;
   border-radius: var(--cq-radius-sm);
   padding: 0.55rem 0.75rem;
-  background: #fff;
+  background: var(--cq-card);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -279,7 +283,7 @@
   padding: 0.42rem 0.85rem;
   border-radius: var(--cq-radius-sm);
   border: 1px solid var(--cq-blue-border);
-  background: #fff;
+  background: var(--cq-card);
   font-size: 0.8rem;
   font-weight: 600;
   color: #566179;
@@ -288,11 +292,11 @@
 }
 
 .cq-pill:hover { background: var(--cq-blue-soft); }
-.cq-pill.is-active { background: var(--cq-accent); border-color: var(--cq-accent); color: #fff; }
+.cq-pill.is-active { background: var(--cq-accent); border-color: var(--cq-accent); color: var(--text-on-accent); }
 .cq-pill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.cq-pill-group { display: inline-flex; gap: 0.3rem; padding: 0.2rem; background: #e9edf7; border-radius: 9px; }
+.cq-pill-group { display: inline-flex; gap: 0.3rem; padding: 0.2rem; background: var(--surface-sunken); border-radius: 9px; }
 .cq-pill-group .cq-pill { border-color: transparent; background: transparent; }
-.cq-pill-group .cq-pill.is-active { background: #fff; color: var(--cq-ink); border-color: transparent; box-shadow: var(--cq-shadow); }
+.cq-pill-group .cq-pill.is-active { background: var(--cq-card); color: var(--cq-ink); border-color: transparent; box-shadow: var(--cq-shadow); }
 .cq-divider-v { width: 1px; height: 22px; background: var(--cq-blue-border); margin: 0 0.15rem; }
 
 /* ── Facet dropdown ──────────────────────────────────────── */
@@ -306,7 +310,7 @@
   padding: 0.42rem 0.8rem;
   border-radius: var(--cq-radius-sm);
   border: 1px solid var(--cq-blue-border);
-  background: #fff;
+  background: var(--cq-card);
   font-size: 0.8rem;
   font-weight: 600;
   color: #566179;
@@ -323,7 +327,7 @@
   z-index: 60;
   width: 300px;
   max-height: 340px;
-  background: #fff;
+  background: var(--cq-card);
   border: 1px solid var(--cq-border);
   border-radius: var(--cq-radius);
   box-shadow: var(--cq-shadow-lg);
@@ -338,7 +342,7 @@
   gap: 0.5rem;
   margin: 0.6rem;
   padding: 0.5rem 0.65rem;
-  border: 2px solid #6366f1;
+  border: 2px solid var(--accent-primary);
   border-radius: var(--cq-radius-sm);
 }
 
@@ -493,8 +497,8 @@
   padding: 0 0.45rem;
   border-radius: 6px;
   border: 1px solid var(--cq-blue-border);
-  background: #fff;
-  color: #475569;
+  background: var(--cq-card);
+  color: var(--cq-ink-soft);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -504,7 +508,7 @@
 }
 
 .cq-pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.cq-pager-btn.is-current { background: var(--cq-accent); border-color: var(--cq-accent); color: #fff; }
+.cq-pager-btn.is-current { background: var(--cq-accent); border-color: var(--cq-accent); color: var(--text-on-accent); }
 
 /* ── Workspace ───────────────────────────────────────────── */
 
@@ -528,8 +532,8 @@
   height: 30px;
   border-radius: 8px;
   border: 1px solid var(--cq-blue-border);
-  background: #fff;
-  color: #475569;
+  background: var(--cq-card);
+  color: var(--cq-ink-soft);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -601,7 +605,7 @@
   margin: 0;
   font-family: var(--font-mono, 'Fira Code', monospace);
   font-size: 0.8rem;
-  color: #1f2937;
+  color: var(--cq-ink);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -659,7 +663,7 @@
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--cq-border);
   border-radius: var(--cq-radius-sm);
-  background: #fff;
+  background: var(--cq-card);
   cursor: pointer;
   text-align: left;
 }
@@ -912,7 +916,7 @@
   border-bottom: 1px solid var(--cq-blue-border);
   white-space: nowrap;
 }
-.cq-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #eef1f8; color: #475569; }
+.cq-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #eef1f8; color: var(--cq-ink-soft); }
 .cq-table tbody tr:last-child td { border-bottom: none; }
 .cq-table tbody tr:hover td { background: #fafbff; }
 
@@ -934,7 +938,7 @@
   box-shadow: var(--cq-shadow-lg);
   font-size: 0.84rem;
   font-weight: 600;
-  background: #fff;
+  background: var(--cq-card);
   border: 1px solid var(--cq-border);
   color: var(--cq-ink);
   animation: cq-slide 0.2s ease-out;

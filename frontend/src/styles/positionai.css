@@ -3,15 +3,18 @@
    the rest of the (dark) app shell. */
 
 .pai {
-  --pai-amber: #f59e0b;
-  --pai-amber-dark: #d97706;
-  --pai-amber-soft: rgba(245, 158, 11, 0.14);
-  --pai-amber-border: rgba(245, 158, 11, 0.4);
-  --pai-ink: #1f2430;
-  --pai-muted: #6b7280;
-  --pai-surface: #ffffff;
-  --pai-page: #f6f7f9;
-  --pai-line: #e6e8ec;
+  /* Derived from the global theme tokens so Position AI flips with
+     light/dark and shares the app-wide palette. The `--pai-amber-*` names
+     are kept so the rest of this file needs no edits. */
+  --pai-amber: var(--accent-primary);
+  --pai-amber-dark: var(--accent-primary-hover);
+  --pai-amber-soft: var(--accent-primary-soft);
+  --pai-amber-border: var(--border-strong);
+  --pai-ink: var(--text-strong);
+  --pai-muted: var(--text-muted);
+  --pai-surface: var(--card-bg);
+  --pai-page: var(--bg-secondary);
+  --pai-line: var(--border-color);
 
   margin: -1.5rem;
   min-height: calc(100vh - 70px);
@@ -22,9 +25,9 @@
 /* ── Hero header ─────────────────────────────────────────── */
 
 .pai-hero {
-  background: linear-gradient(103deg, #7a4708 0%, #8a5209 46%, #a4650d 100%);
+  background: linear-gradient(103deg, var(--accent-primary) 0%, var(--accent-purple) 52%, var(--accent-pink) 100%);
   padding: 1.5rem 2rem 0;
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .pai-hero-kicker {
   font-size: 0.62rem;
@@ -83,7 +86,7 @@
 }
 .pai-tab:hover {
   background: rgba(0, 0, 0, 0.32);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .pai-tab.is-active {
   background: var(--pai-surface);
@@ -146,7 +149,7 @@
 }
 .pai-hint {
   font-size: 0.78rem;
-  color: #4f5bd5;
+  color: var(--accent-primary);
   line-height: 1.5;
   margin: 0.5rem 0 0.75rem;
   display: flex;
@@ -184,7 +187,7 @@
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--pai-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--pai-surface);
   color: var(--pai-ink);
   font-size: 0.85rem;
   cursor: pointer;
@@ -193,11 +196,11 @@
 .pai-select-control:focus,
 .pai-select-control.is-open {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
 }
 .pai-select-placeholder {
-  color: #9aa1ad;
+  color: var(--text-dim);
 }
 .pai-select-menu {
   position: absolute;
@@ -207,7 +210,7 @@
   right: 0;
   max-height: 340px;
   overflow-y: auto;
-  background: #fff;
+  background: var(--pai-surface);
   border: 1px solid var(--pai-line);
   border-radius: 10px;
   box-shadow: 0 16px 40px rgba(16, 24, 40, 0.16);
@@ -218,7 +221,7 @@
   text-align: left;
   padding: 0.7rem 0.95rem;
   border: none;
-  border-bottom: 1px solid #f1f2f5;
+  border-bottom: 1px solid var(--pai-line);
   background: none;
   cursor: pointer;
 }
@@ -226,7 +229,7 @@
   border-bottom: none;
 }
 .pai-option:hover:not(:disabled) {
-  background: #f7f8fa;
+  background: var(--hover-overlay);
 }
 .pai-option:disabled {
   opacity: 0.45;
@@ -283,7 +286,7 @@
   border: none;
   border-radius: 50%;
   background: var(--pai-amber);
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   padding: 0;
   flex-shrink: 0;
@@ -294,12 +297,12 @@
 .pai-chip.is-matched {
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.35);
-  color: #047857;
+  color: var(--accent-emerald);
 }
 .pai-chip.is-plain {
-  background: #f4f5f7;
+  background: var(--surface-sunken);
   border-color: var(--pai-line);
-  color: #4b5563;
+  color: var(--text-main);
 }
 
 .pai-total {
@@ -324,14 +327,14 @@
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--pai-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--pai-surface);
   color: var(--pai-ink);
   font-size: 0.84rem;
   font-family: inherit;
 }
 .pai-input::placeholder,
 .pai-textarea::placeholder {
-  color: #9aa1ad;
+  color: var(--text-dim);
 }
 .pai-input:focus,
 .pai-textarea:focus {
@@ -365,13 +368,13 @@
 }
 .pai-btn-primary {
   background: var(--pai-amber);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .pai-btn-primary:hover:not(:disabled) {
   background: var(--pai-amber-dark);
 }
 .pai-btn-outline {
-  background: #fff;
+  background: var(--pai-surface);
   border-color: var(--pai-amber-border);
   color: var(--pai-amber-dark);
 }
@@ -398,7 +401,7 @@
 .pai-pill.is-info {
   background: rgba(99, 102, 241, 0.1);
   border-color: rgba(99, 102, 241, 0.28);
-  color: #4f46e5;
+  color: var(--accent-primary);
 }
 
 /* ── Gap analysis scope ──────────────────────────────────── */
@@ -407,7 +410,7 @@
   border: 1px dashed var(--pai-line);
   border-radius: 10px;
   padding: 1.1rem 1.15rem;
-  background: #fafbfc;
+  background: var(--surface-sunken);
 }
 .pai-empty-title {
   font-size: 0.86rem;
@@ -443,13 +446,13 @@
 }
 .pai-scope-meta {
   font-size: 0.78rem;
-  color: #6366f1;
+  color: var(--accent-primary);
   margin: 0.15rem 0 0.5rem;
   line-height: 1.4;
 }
 .pai-more {
   font-size: 0.78rem;
-  color: #6366f1;
+  color: var(--accent-primary);
   font-weight: 600;
   margin-top: 0.45rem;
 }
@@ -479,14 +482,14 @@
 .pai-score-bar {
   height: 8px;
   border-radius: 6px;
-  background: #eef0f3;
+  background: var(--surface-sunken);
   overflow: hidden;
   margin-top: 0.85rem;
 }
 .pai-score-fill {
   height: 100%;
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--pai-amber), #fbbf24);
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-pink));
   transition: width 0.3s ease;
 }
 
@@ -503,7 +506,7 @@
 }
 .pai-missing-item {
   padding: 0.7rem 0 0.55rem;
-  border-bottom: 1px solid #f1f2f5;
+  border-bottom: 1px solid var(--pai-line);
 }
 .pai-missing-item:last-child {
   border-bottom: none;
@@ -546,7 +549,7 @@
 .pai-missing-bar {
   height: 4px;
   border-radius: 3px;
-  background: #f0f1f4;
+  background: var(--surface-sunken);
   overflow: hidden;
   margin: 0.45rem 0 0.4rem;
 }
@@ -557,7 +560,7 @@
 }
 .pai-missing-jd {
   font-size: 0.8rem;
-  color: #6366f1;
+  color: var(--accent-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -586,7 +589,7 @@
   line-height: 1.55;
 }
 .pai-hist-banner {
-  background: #fef6e0;
+  background: var(--accent-primary-soft);
   border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 10px;
   padding: 0.85rem 1rem;
@@ -624,7 +627,7 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--pai-muted);
-  background: #fafbfc;
+  background: var(--surface-sunken);
   border-bottom: 1px solid var(--pai-line);
   white-space: nowrap;
 }
@@ -638,7 +641,7 @@
   border-bottom: none;
 }
 .pai-table tr:nth-child(even) td {
-  background: #fcfcfd;
+  background: var(--surface-sunken);
 }
 .pai-td-date {
   color: var(--pai-muted);
@@ -655,7 +658,7 @@
   line-height: 1.35;
 }
 .pai-hist-jd-meta {
-  color: #6366f1;
+  color: var(--accent-primary);
   font-size: 0.78rem;
   line-height: 1.4;
 }
@@ -698,7 +701,7 @@
 }
 .pai-fb-q-text {
   font-size: 0.88rem;
-  color: #3f4759;
+  color: var(--text-main);
   line-height: 1.45;
 }
 .pai-fb-toggle {
@@ -721,7 +724,7 @@
   height: 20px;
   border-radius: 999px;
   border: none;
-  background: #d7dae0;
+  background: var(--surface-sunken);
   cursor: pointer;
   padding: 0;
   transition: background 0.18s ease;
@@ -735,7 +738,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--pai-surface);
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.28);
   transition: transform 0.18s ease;
 }
@@ -752,7 +755,7 @@
   padding: 1rem 1.35rem;
   display: flex;
   justify-content: flex-end;
-  background: #fcfcfd;
+  background: var(--surface-sunken);
 }
 
 .pai-loading {

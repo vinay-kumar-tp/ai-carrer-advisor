@@ -5,7 +5,6 @@ import { BrandLogo } from './BrandLogo';
 import {
   LayoutDashboard,
   User,
-  Video,
   Code2,
   Brain,
   Sparkles,
@@ -26,7 +25,6 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { path: '/dashboard', label: 'Home Dashboard', icon: LayoutDashboard },
     { path: '/profile', label: 'My Profile', icon: User },
-    { path: '/video-resume', label: 'Video Resume', icon: Video },
     { path: '/code-quest', label: 'Code Quest', icon: Code2 },
     { path: '/aptitude-quest', label: 'Aptitude Quest', icon: Brain },
     { path: '/personality-test', label: 'Personality Test', icon: Sparkles },

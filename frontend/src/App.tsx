@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedLayout } from './components/ProtectedLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { ProfilePage } from './pages/Profile';
-import { VideoResumePage } from './pages/VideoResume';
 import { CodeQuestPage } from './pages/CodeQuest';
 import { AptitudeQuestPage } from './pages/AptitudeQuest';
 import { PersonalityTestPage } from './pages/PersonalityTest';
@@ -23,6 +23,8 @@ import { AdminDashboardPage } from './pages/AdminDashboard';
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
+      {/* Outside AuthProvider so /login and /register are themed too. */}
+      <ThemeProvider>
       <AuthProvider>
         <Routes>
           {/* Public Auth Routes */}
@@ -33,7 +35,6 @@ export const App: React.FC = () => {
           <Route element={<ProtectedLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/video-resume" element={<VideoResumePage />} />
             <Route path="/code-quest" element={<CodeQuestPage />} />
             <Route path="/aptitude-quest" element={<AptitudeQuestPage />} />
             <Route path="/personality-test" element={<PersonalityTestPage />} />
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };
