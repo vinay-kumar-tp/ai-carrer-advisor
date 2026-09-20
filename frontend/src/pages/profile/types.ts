@@ -224,11 +224,31 @@ export type ResumeRow = {
   is_primary: boolean;
   target_job_id: string | null;
   document_id: string | null;
+  sections: string[];
+  job_context: Record<string, unknown>;
+  analysis_score: number | null;
+  has_content: boolean;
   created_at: string | null;
   updated_at: string | null;
 };
 
-export type ResumeLibrary = { resumes: ResumeRow[]; total: number; templates: string[] };
+export type ResumeTemplateMeta = {
+  id: string;
+  accent: string;
+  /** Layout family: 'single' | 'two-col' | 'sidebar'. */
+  layout: string;
+  family: string;
+  font: string;
+  ats_safe: boolean;
+  description: string;
+};
+
+export type ResumeLibrary = {
+  resumes: ResumeRow[];
+  total: number;
+  templates: string[];
+  template_meta: ResumeTemplateMeta[];
+};
 
 export type AtsReport = {
   ats_score: number;
@@ -236,6 +256,82 @@ export type AtsReport = {
   missing_keywords: string[];
   suggestions: string[];
   word_count: number;
+};
+
+/* ── Resume builder: analyzer ───────────────────────────── */
+
+export type AnalyzerCheck = { status: 'pass' | 'fail'; message: string };
+
+export type AnalyzerCategory = {
+  key: string;
+  label: string;
+  icon: string;
+  checks: AnalyzerCheck[];
+  /** Category-specific raw score; scales differ per category (see `total`). */
+  score: number | null;
+  total: number | null;
+  passed: number;
+  count: number;
+};
+
+export type ResumeAnalysis = {
+  overall_score: number;
+  categories: AnalyzerCategory[];
+};
+
+/* ── Resume builder: tailor to job ──────────────────────── */
+
+export type TailorMatch = {
+  overall: number;
+  hard_skills: number;
+  soft_skills: number;
+  title_match: number;
+  keyword_gaps: { hard_skills: string[]; soft_skills: string[] };
+  matched: string[];
+};
+
+export type TailorSuggestion = {
+  id: string;
+  type: 'summary' | 'skills' | 'bullet';
+  section: string;
+  kind: string;
+  target: Record<string, unknown>;
+  original: string;
+  proposed?: string;
+  proposed_add?: string[];
+  status: string;
+  needs_detail: boolean;
+  detail_prompt?: string;
+  detail_chip?: string;
+  rationale: string;
+};
+
+export type TailoringRun = {
+  job: { title: string; description: string };
+  match: TailorMatch;
+  suggestions: TailorSuggestion[];
+};
+
+/** Shape persisted on the resume row (superset of a fresh run). */
+export type StoredTailoring = {
+  job_id: string | null;
+  title: string;
+  company: string;
+  description: string;
+  match: TailorMatch;
+  suggestions: TailorSuggestion[];
+  generated_at: string;
+};
+
+export type SectionCatalogueItem = { key: string; label: string };
+
+export type ResumeDetail = ResumeRow & {
+  content: Record<string, any>;
+  section_counts: Record<string, number>;
+  section_catalogue: SectionCatalogueItem[];
+  templates: ResumeTemplateMeta[];
+  analysis: ResumeAnalysis | null;
+  tailoring: StoredTailoring | null;
 };
 
 /* ── Scorecard ──────────────────────────────────────────── */

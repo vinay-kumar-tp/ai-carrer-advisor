@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
@@ -10,7 +10,7 @@ from app.api.routers import auth, profile, jobs, codequest, aptitude, personalit
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
-    print(f"[INFO] {settings.APP_NAME} v{settings.APP_VERSION} started")
+    print(f"[INFO] {settings.APP_NAME} v{settings.APP_VERSION} started (debug={settings.DEBUG})")
     yield
     # Shutdown
     print("[INFO] Shutting down...")
@@ -21,16 +21,34 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="AI-driven Career Advising Platform for students and early-career professionals",
     lifespan=lifespan,
+    # Swagger/Redoc/OpenAPI schema are only exposed in DEBUG mode so a
+    # production deploy doesn't hand out a full API map to anyone who asks.
+    docs_url="/api/docs" if settings.DEBUG else None,
+    redoc_url="/api/redoc" if settings.DEBUG else None,
+    openapi_url="/api/openapi.json" if settings.DEBUG else None,
 )
 
-# CORS
+# CORS — locked to the explicit origin list from settings (see CORS_ORIGINS_RAW).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Baseline hardening headers on every response."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
+    if not settings.DEBUG:
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    return response
 
 # Register routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])

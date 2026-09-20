@@ -240,10 +240,49 @@ class ResumeRename(BaseModel):
 class ResumeGenerateInput(BaseModel):
     template: str = "Template 1"
     name: Optional[str] = None
+    sections: Optional[list[str]] = None
 
 
 class ResumeTailorInput(BaseModel):
     job_id: str
+    name: Optional[str] = None
+
+
+class ResumeDesignUpdate(BaseModel):
+    """Template switch and/or section visibility change from the builder sidebar."""
+
+    template: Optional[str] = None
+    sections: Optional[list[str]] = None
+
+
+class ResumeContentUpdate(BaseModel):
+    """Direct edit of the structured resume snapshot from the builder."""
+
+    content: dict
+
+
+class ResumeTailorPreviewInput(BaseModel):
+    """Ask for a match breakdown + reviewable suggestions without writing anything."""
+
+    job_id: Optional[str] = None
+    job_title: Optional[str] = None
+    job_description: Optional[str] = None
+
+
+class SuggestionDecision(BaseModel):
+    suggestion_id: str
+    accepted: bool = True
+    user_detail: Optional[str] = None
+
+
+class ResumeApplySuggestionsInput(BaseModel):
+    """Apply the accepted subset of a tailoring run.
+
+    ``as_copy`` keeps the original resume untouched and writes a new tailored row.
+    """
+
+    decisions: list[SuggestionDecision] = Field(default_factory=list)
+    as_copy: bool = True
     name: Optional[str] = None
 
 

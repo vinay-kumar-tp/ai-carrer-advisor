@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
 from app.models.models import User, Profile, LeaderboardEntry
 from app.schemas.schemas import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, MessageResponse
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.rate_limit import enforce_rate_limit
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(data: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    enforce_rate_limit(request, "register")
     # Check existing user
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
@@ -49,7 +51,8 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(data: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    enforce_rate_limit(request, "login")
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 

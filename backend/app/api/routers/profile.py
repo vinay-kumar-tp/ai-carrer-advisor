@@ -55,10 +55,14 @@ from app.schemas.profile import (
     PositionInput,
     ProgramDetailsUpdate,
     ProjectInput,
+    ResumeApplySuggestionsInput,
+    ResumeContentUpdate,
+    ResumeDesignUpdate,
     ResumeGenerateInput,
     ResumeInput,
     ResumeRename,
     ResumeTailorInput,
+    ResumeTailorPreviewInput,
     ScorecardEntryInput,
     SkillsBulkUpdate,
     SocialLinksUpdate,
@@ -67,6 +71,8 @@ from app.schemas.profile import (
 )
 from app.schemas.schemas import MessageResponse, SkillResponse, UserSkillCreate
 from app.services import profile_service as ps
+from app.services import resume_builder as rb
+from app.services import resume_tailor as rt
 from app.services.profile_pdf import build_profile_pdf
 
 router = APIRouter()
@@ -630,6 +636,22 @@ def _score_resume_text(text: str, target_terms: list[str]) -> dict:
     }
 
 
+async def _resume_content(db: AsyncSession, row: Resume, user_id: str) -> dict:
+    """Best available structured snapshot for a resume row.
+
+    Generated/tailored resumes carry their own ``content``. Uploaded ones have
+    none, so we fall back to the live profile snapshot so the builder, analyzer
+    and tailoring flows still have something meaningful to work on.
+    """
+    if row.content:
+        return dict(row.content)
+    return ps.build_resume_content(await _build_aggregate(db, user_id))
+
+
+def _resume_sections(row: Resume, content: dict) -> list[str]:
+    return list(row.sections) if row.sections else rb.default_sections(content)
+
+
 @router.get("/resumes")
 async def list_resumes(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     rows = await _list_rows(db, Resume, user_id)
@@ -637,7 +659,18 @@ async def list_resumes(user_id: str = Depends(get_current_user_id), db: AsyncSes
     return {
         "resumes": [ps.serialize_resume(r) for r in rows],
         "total": len(rows),
-        "templates": ["Template 1", "Template 2", "Template 3", "Template 4"],
+        "templates": list(rb.TEMPLATES.keys()),
+        "template_meta": rb.template_meta(),
+    }
+
+
+@router.get("/resumes/templates")
+async def resume_templates(user_id: str = Depends(get_current_user_id)):
+    """Template catalogue plus the canonical section list for the builder sidebar."""
+    return {
+        "templates": rb.template_meta(),
+        "default_template": rb.DEFAULT_TEMPLATE,
+        "sections": [{"key": k, "label": rb.SECTION_LABELS[k]} for k in rb.SECTION_ORDER],
     }
 
 
@@ -680,21 +713,264 @@ async def generate_resume(
 
     existing = await _list_rows(db, Resume, user_id)
     stamp = datetime.now(timezone.utc).strftime("%d %b %Y")
-    name = (data.name or f"{data.template} - {aggregate['full_name']} - {stamp}").strip()
+    template = data.template if data.template in rb.TEMPLATES else rb.DEFAULT_TEMPLATE
+    name = (data.name or f"{template} - {aggregate['full_name']} - {stamp}").strip()
+    sections = data.sections or rb.default_sections(content)
+    analysis = rb.analyze(content, sections)
 
     row = Resume(
         user_id=user_id,
         name=name,
         source="generated",
-        template=data.template,
+        template=template,
         status="ready",
         content=content,
+        sections=sections,
+        analysis=analysis,
         is_primary=not existing,
-        ats_score=_score_resume_text(ps.resume_plain_text(content), ATS_BASELINE_KEYWORDS)["ats_score"],
+        ats_score=analysis["overall_score"],
     )
     db.add(row)
     await db.flush()
     return ps.serialize_resume(row)
+
+
+@router.get("/resumes/{resume_id}")
+async def get_resume(
+    resume_id: str, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+):
+    """Everything the builder screen needs for one resume in a single call."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    content = await _resume_content(db, row, user_id)
+    sections = _resume_sections(row, content)
+    return {
+        **ps.serialize_resume(row),
+        "content": content,
+        "sections": sections,
+        "section_counts": rb.section_counts(content),
+        "section_catalogue": [{"key": k, "label": rb.SECTION_LABELS[k]} for k in rb.SECTION_ORDER],
+        "templates": rb.template_meta(),
+        "analysis": row.analysis or None,
+        "tailoring": row.job_context or None,
+    }
+
+
+@router.put("/resumes/{resume_id}/design")
+async def update_resume_design(
+    resume_id: str,
+    data: ResumeDesignUpdate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Switch template and/or toggle which sections are rendered."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+
+    if data.template is not None:
+        if data.template not in rb.TEMPLATES:
+            raise HTTPException(status_code=400, detail=f"Unknown template '{data.template}'")
+        row.template = data.template
+
+    if data.sections is not None:
+        unknown = [s for s in data.sections if s not in rb.SECTION_LABELS]
+        if unknown:
+            raise HTTPException(status_code=400, detail=f"Unknown section(s): {', '.join(unknown)}")
+        # Persist in canonical order so preview/PDF/sidebar always agree.
+        row.sections = [s for s in rb.SECTION_ORDER if s in set(data.sections)]
+
+    content = await _resume_content(db, row, user_id)
+    sections = _resume_sections(row, content)
+    row.analysis = rb.analyze(content, sections)
+    row.ats_score = row.analysis["overall_score"]
+    await db.flush()
+    return {**ps.serialize_resume(row), "sections": sections, "analysis": row.analysis}
+
+
+@router.put("/resumes/{resume_id}/content")
+async def update_resume_content(
+    resume_id: str,
+    data: ResumeContentUpdate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persist an in-builder edit of the structured snapshot."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    row.content = data.content
+    sections = _resume_sections(row, data.content)
+    row.analysis = rb.analyze(data.content, sections)
+    row.ats_score = row.analysis["overall_score"]
+    row.status = "ready"
+    await db.flush()
+    return {**ps.serialize_resume(row), "content": row.content, "analysis": row.analysis}
+
+
+@router.post("/resumes/{resume_id}/refresh")
+async def refresh_resume(
+    resume_id: str, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+):
+    """Re-snapshot the current profile into this resume, keeping design choices."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    content = ps.build_resume_content(await _build_aggregate(db, user_id))
+    row.content = content
+    sections = _resume_sections(row, content)
+    row.analysis = rb.analyze(content, sections)
+    row.ats_score = row.analysis["overall_score"]
+    row.status = "ready"
+    await db.flush()
+    return {**ps.serialize_resume(row), "content": content, "analysis": row.analysis}
+
+
+@router.get("/resumes/{resume_id}/preview")
+async def preview_resume(
+    resume_id: str,
+    template: Optional[str] = Query(None, description="Preview a template without saving it"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rendered HTML for the live preview pane."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    content = await _resume_content(db, row, user_id)
+    chosen = template if template in rb.TEMPLATES else (row.template or rb.DEFAULT_TEMPLATE)
+    html = rb.render_html(content, chosen, _resume_sections(row, content))
+    return Response(content=html, media_type="text/html")
+
+
+@router.post("/resumes/{resume_id}/analyze")
+async def analyze_resume(
+    resume_id: str, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
+):
+    """Run the structured resume analyzer and persist the result."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    content = await _resume_content(db, row, user_id)
+    analysis = rb.analyze(content, _resume_sections(row, content))
+    row.analysis = analysis
+    row.ats_score = analysis["overall_score"]
+    row.status = "ready"
+    await db.flush()
+    return {"resume": ps.serialize_resume(row), **analysis}
+
+
+@router.post("/resumes/{resume_id}/tailor-preview")
+async def tailor_preview(
+    resume_id: str,
+    data: ResumeTailorPreviewInput,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Match breakdown + reviewable suggestions. Nothing is applied yet.
+
+    The run is stashed on the row so a later apply call can resolve suggestion ids.
+    """
+    from app.models.models import JobListing
+
+    row = await _own_row(db, Resume, resume_id, user_id)
+
+    job: dict = {}
+    if data.job_id:
+        listing = (await db.execute(select(JobListing).where(JobListing.id == data.job_id))).scalar_one_or_none()
+        if not listing:
+            raise HTTPException(status_code=404, detail="Job not found")
+        job = {
+            "job_id": listing.id,
+            "title": listing.title,
+            "company": listing.company,
+            "description": listing.description or "",
+            "skills": list(listing.required_skills or []),
+        }
+    else:
+        if not (data.job_title or data.job_description):
+            raise HTTPException(status_code=400, detail="Provide a job_id, or a job title/description to tailor against.")
+        job = {
+            "job_id": None,
+            "title": data.job_title or "",
+            "company": "",
+            "description": data.job_description or "",
+            "skills": [],
+        }
+
+    content = await _resume_content(db, row, user_id)
+    result = await rt.build_tailoring(content, job)
+
+    row.job_context = {
+        "job_id": job.get("job_id"),
+        "title": job.get("title", ""),
+        "company": job.get("company", ""),
+        "description": (job.get("description") or "")[:4000],
+        "match": result["match"],
+        "suggestions": result["suggestions"],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.flush()
+    return {"resume": ps.serialize_resume(row), **result}
+
+
+@router.post("/resumes/{resume_id}/apply-suggestions")
+async def apply_resume_suggestions(
+    resume_id: str,
+    data: ResumeApplySuggestionsInput,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Apply the accepted suggestions from the last tailoring run."""
+    row = await _own_row(db, Resume, resume_id, user_id)
+    run = dict(row.job_context or {})
+    stored = {s.get("id"): s for s in (run.get("suggestions") or []) if isinstance(s, dict)}
+    if not stored:
+        raise HTTPException(status_code=400, detail="Run a tailoring preview before applying suggestions.")
+
+    accepted = [d for d in data.decisions if d.accepted]
+    unknown = [d.suggestion_id for d in accepted if d.suggestion_id not in stored]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown suggestion id(s): {', '.join(unknown)}")
+    if not accepted:
+        raise HTTPException(status_code=400, detail="No suggestions were accepted.")
+
+    content = await _resume_content(db, row, user_id)
+    for decision in accepted:
+        content = rt.apply_suggestion(content, stored[decision.suggestion_id], decision.user_detail)
+
+    # Record the decision on each stored suggestion so the UI can show history.
+    decided = {d.suggestion_id: d for d in data.decisions}
+    for suggestion in run.get("suggestions") or []:
+        choice = decided.get(suggestion.get("id"))
+        if choice:
+            suggestion["status"] = "accepted" if choice.accepted else "rejected"
+
+    sections = _resume_sections(row, content)
+    analysis = rb.analyze(content, sections)
+
+    if data.as_copy:
+        target = Resume(
+            user_id=user_id,
+            name=(data.name or f"{row.name} → {run.get('title') or 'Tailored'}")[:255],
+            source="tailored",
+            template=row.template or rb.DEFAULT_TEMPLATE,
+            status="ready",
+            content=content,
+            sections=sections,
+            analysis=analysis,
+            job_context=run,
+            target_job_id=run.get("job_id"),
+            ats_score=analysis["overall_score"],
+        )
+        db.add(target)
+        # The source keeps its updated decision history but not the edited content.
+        row.job_context = run
+    else:
+        row.content = content
+        row.sections = sections
+        row.analysis = analysis
+        row.ats_score = analysis["overall_score"]
+        row.job_context = run
+        row.target_job_id = run.get("job_id") or row.target_job_id
+        target = row
+
+    await db.flush()
+    return {
+        "resume": ps.serialize_resume(target),
+        "applied": len(accepted),
+        "content": content,
+        "analysis": analysis,
+    }
 
 
 @router.post("/resumes/{resume_id}/tailor")
@@ -712,25 +988,34 @@ async def tailor_resume(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    content = dict(source.content or ps.build_resume_content(await _build_aggregate(db, user_id)))
+    content = await _resume_content(db, source, user_id)
     target_terms = [s.lower() for s in (job.required_skills or [])] or ATS_BASELINE_KEYWORDS
     report = _score_resume_text(ps.resume_plain_text(content), target_terms)
-    content["tailored_for"] = {"job_id": job.id, "title": job.title, "company": job.company}
-    content["ats_report"] = report
+
+    sections = _resume_sections(source, content)
+    analysis = rb.analyze(content, sections)
 
     row = Resume(
         user_id=user_id,
         name=(data.name or f"{source.name} → {job.title}")[:255],
         source="tailored",
-        template=source.template,
+        template=source.template or rb.DEFAULT_TEMPLATE,
         status="ready",
         content=content,
+        sections=sections,
+        analysis=analysis,
+        job_context={
+            "job_id": job.id,
+            "title": job.title,
+            "company": job.company,
+            "description": (job.description or "")[:4000],
+        },
         target_job_id=job.id,
-        ats_score=report["ats_score"],
+        ats_score=analysis["overall_score"],
     )
     db.add(row)
     await db.flush()
-    return {"resume": ps.serialize_resume(row), "ats_report": report}
+    return {"resume": ps.serialize_resume(row), "ats_report": report, "analysis": analysis}
 
 
 @router.post("/resumes/{resume_id}/ats-score")
@@ -829,9 +1114,13 @@ async def download_resume(
                 headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'},
             )
 
-    aggregate = await _build_aggregate(db, user_id)
-    pdf = build_profile_pdf(aggregate)
+    content = await _resume_content(db, row, user_id)
     safe = "".join(ch for ch in row.name if ch.isalnum() or ch in " -_").strip() or "resume"
+    try:
+        pdf = rb.render_pdf(content, row.template or rb.DEFAULT_TEMPLATE, _resume_sections(row, content))
+    except Exception:
+        # Never leave the user without a download; fall back to the plain profile PDF.
+        pdf = build_profile_pdf(await _build_aggregate(db, user_id))
     return Response(
         content=pdf,
         media_type="application/pdf",

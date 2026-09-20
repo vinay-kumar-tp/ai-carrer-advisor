@@ -1,12 +1,16 @@
-from pydantic_settings import BaseSettings
+import secrets
+import warnings
 from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # App
     APP_NAME: str = "AI Career Advisor"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    # Controls docs exposure and error verbosity — must be False in production.
+    DEBUG: bool = False
     SQL_ECHO: bool = False  # set to True to log every SQL statement
 
     # Database — SQLite for instant zero-dependency execution, customizable via env
@@ -15,14 +19,18 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # JWT
-    SECRET_KEY: str = "your-secret-key-change-in-production-min-32-chars"
+    # JWT — no baked-in default. If the env var is missing we generate a
+    # random one at process start (see below) rather than shipping a secret
+    # that's sitting in every clone of this repo.
+    SECRET_KEY: Optional[str] = None
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"]
+    # CORS — comma-separated list of allowed origins, e.g.
+    # "https://your-app.vercel.app,https://your-app.netlify.app"
+    # Defaults to localhost so `npm run dev` keeps working out of the box.
+    CORS_ORIGINS_RAW: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # AI — Gemini (Google) and/or OpenRouter (OpenAI-compatible gateway).
     # If OPENROUTER_API_KEY is set it takes precedence; otherwise Gemini is used;
@@ -39,5 +47,25 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
 
+    @property
+    def CORS_ORIGINS(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS_RAW.split(",") if origin.strip()]
+
 
 settings = Settings()
+
+if not settings.SECRET_KEY:
+    if settings.DEBUG:
+        # Dev convenience: a random key that's stable for this process, so
+        # local hot-reloads don't invalidate every session on every save.
+        settings.SECRET_KEY = secrets.token_urlsafe(48)
+        warnings.warn(
+            "SECRET_KEY not set — using a randomly generated development key. "
+            "Set SECRET_KEY in your environment before deploying.",
+            RuntimeWarning,
+        )
+    else:
+        raise RuntimeError(
+            "SECRET_KEY environment variable is required when DEBUG=False. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+        )

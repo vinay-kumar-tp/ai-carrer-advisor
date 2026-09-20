@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// Set VITE_API_URL in the deployed environment (e.g. Vercel/Netlify project
+// settings) to point at the live backend. Falls back to localhost for `npm
+// run dev` so nothing extra is needed locally.
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

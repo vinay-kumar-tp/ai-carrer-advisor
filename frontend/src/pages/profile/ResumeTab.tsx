@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Eye, FileUp, Pencil, Sparkles, Star, Trash2, Wand2 } from 'lucide-react';
+import { Download, Eye, FileUp, PencilRuler, Pencil, Sparkles, Star, Trash2, Wand2 } from 'lucide-react';
 import api from '../../services/api';
+import '../../styles/resume-builder.css';
+import { ResumeBuilderPanel } from './ResumeBuilderPanel';
 import {
   Card,
   ConfirmDialog,
@@ -12,7 +14,7 @@ import {
   Pill,
   usePaged,
 } from '../../components/profile/ui';
-import { FormGrid, SelectField, TextField } from '../../components/profile/forms';
+import { FormGrid, TextField } from '../../components/profile/forms';
 import { errorMessage } from './useProfileData';
 import type { AtsReport, ResumeLibrary, ResumeRow } from './types';
 
@@ -51,7 +53,7 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
 
   const [generating, setGenerating] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [template, setTemplate] = useState('Template 1');
+  const [template, setTemplate] = useState('');
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const [renaming, setRenaming] = useState<ResumeRow | null>(null);
@@ -69,6 +71,7 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
   const [pendingDelete, setPendingDelete] = useState<ResumeRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [preview, setPreview] = useState<{ name: string; url: string } | null>(null);
+  const [builder, setBuilder] = useState<{ id: string; pane: 'analyzer' | 'tailor' } | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -94,15 +97,25 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
 
   const paged = usePaged(library?.resumes ?? [], 10);
 
+  const openGenerate = () => {
+    // Default to the first template if the user hasn't chosen one yet.
+    if (!template && library?.templates?.length) setTemplate(library.templates[0]);
+    setGenerateError(null);
+    setGenerateOpen(true);
+  };
+
   const generate = async () => {
     setGenerating(true);
     setGenerateError(null);
     try {
-      await api.post('/profile/resumes/generate', { template });
+      const chosen = template || library?.templates?.[0] || '';
+      const { data } = await api.post('/profile/resumes/generate', { template: chosen });
       setGenerateOpen(false);
       notify('Resume generated from your profile');
       await load();
       onChanged();
+      // Drop the user straight into the builder on the thing they just made.
+      if (data?.id) setBuilder({ id: data.id, pane: 'analyzer' });
     } catch (error) {
       setGenerateError(errorMessage(error));
     } finally {
@@ -258,6 +271,22 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
     }
   };
 
+  // The builder takes over the whole tab so the preview gets real estate.
+  if (builder) {
+    return (
+      <ResumeBuilderPanel
+        resumeId={builder.id}
+        initialPane={builder.pane}
+        onBack={() => {
+          setBuilder(null);
+          load();
+        }}
+        notify={notify}
+        onChanged={onChanged}
+      />
+    );
+  }
+
   if (loading) return <Loading label="Loading your resume library..." />;
 
   const resumes = library?.resumes ?? [];
@@ -283,7 +312,7 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
             >
               <FileUp size={13} /> {busyId === 'upload' ? 'Uploading...' : 'Upload resume'}
             </button>
-            <button className="mp-btn mp-btn-primary mp-btn-sm" onClick={() => setGenerateOpen(true)}>
+            <button className="mp-btn mp-btn-primary mp-btn-sm" onClick={openGenerate}>
               <Wand2 size={13} /> Generate My Resume
             </button>
           </>
@@ -300,7 +329,7 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
             title="No resumes yet"
             text="Generate one from your profile in a single click, or upload a resume you already have."
             actionLabel="Generate My Resume"
-            onAction={() => setGenerateOpen(true)}
+            onAction={openGenerate}
           />
         ) : (
           <>
@@ -351,14 +380,35 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
                           >
                             <Pencil size={13} />
                           </button>
-                          <button
-                            className="mp-iconbtn"
-                            title="Optimise for a job"
-                            aria-label={`Optimise ${resume.name} for a job`}
-                            onClick={() => openTailor(resume)}
-                          >
-                            <Sparkles size={13} />
-                          </button>
+                          {resume.has_content ? (
+                            <>
+                              <button
+                                className="mp-iconbtn"
+                                title="Open builder"
+                                aria-label={`Open ${resume.name} in the builder`}
+                                onClick={() => setBuilder({ id: resume.id, pane: 'analyzer' })}
+                              >
+                                <PencilRuler size={13} />
+                              </button>
+                              <button
+                                className="mp-iconbtn"
+                                title="Tailor to a job"
+                                aria-label={`Tailor ${resume.name} to a job`}
+                                onClick={() => setBuilder({ id: resume.id, pane: 'tailor' })}
+                              >
+                                <Sparkles size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="mp-iconbtn"
+                              title="Optimise for a job"
+                              aria-label={`Optimise ${resume.name} for a job`}
+                              onClick={() => openTailor(resume)}
+                            >
+                              <Sparkles size={13} />
+                            </button>
+                          )}
                           <button
                             className="mp-iconbtn"
                             style={resume.is_primary ? { background: '#f0921f', color: '#fff' } : undefined}
@@ -427,7 +477,7 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
         )}
       </Card>
 
-      {/* Generate */}
+      {/* Generate — visual template gallery */}
       {generateOpen && (
         <Modal
           title="Generate My Resume"
@@ -436,17 +486,45 @@ export const ResumeTab: React.FC<Props> = ({ notify, onChanged }) => {
           submitLabel="Generate"
           busy={generating}
           error={generateError}
+          wide
         >
-          <FormGrid cols={1}>
-            <SelectField
-              label="Template"
-              value={template}
-              onChange={setTemplate}
-              options={library?.templates ?? ['Template 1']}
-              allowBlank={false}
-              hint="Your profile data is snapshotted into the resume and scored for ATS readiness."
-            />
-          </FormGrid>
+          <p className="mp-inline-note" style={{ marginBottom: '0.8rem' }}>
+            Pick a template. Your profile data is snapshotted into it, scored for ATS readiness, and opened in the
+            builder where you can toggle sections, preview live and tailor it to a job.
+          </p>
+          <div className="rb-gallery">
+            {(library?.template_meta ?? []).map((meta) => {
+              const selected = template === meta.id;
+              return (
+                <button
+                  type="button"
+                  key={meta.id}
+                  className={`rb-gcard${selected ? ' is-active' : ''}`}
+                  onClick={() => setTemplate(meta.id)}
+                  aria-pressed={selected}
+                >
+                  <span
+                    className={`rb-gart fam-${meta.family}`}
+                    style={{ ['--tpl-accent' as string]: meta.accent }}
+                  >
+                    <span className="rb-gart-rail" />
+                    <span className="rb-gart-body">
+                      <span className="rb-gart-bar" />
+                      <span className="rb-gart-line" />
+                      <span className="rb-gart-line short" />
+                      <span className="rb-gart-line" />
+                    </span>
+                  </span>
+                  <span className="rb-gcard-name">{meta.id}</span>
+                  <span className="rb-gcard-desc">{meta.description}</span>
+                  <span className="rb-gcard-tags">
+                    <span className="rb-gtag">{meta.family === 'two-col' ? 'two column' : meta.family}</span>
+                    {meta.ats_safe && <span className="rb-gtag is-ats">ATS-safe</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </Modal>
       )}
 

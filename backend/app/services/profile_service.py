@@ -253,6 +253,10 @@ def serialize_resume(row) -> dict:
         "is_primary": bool(row.is_primary),
         "target_job_id": row.target_job_id,
         "document_id": row.document_id,
+        "sections": list(row.sections or []),
+        "job_context": dict(row.job_context or {}),
+        "analysis_score": (row.analysis or {}).get("overall_score"),
+        "has_content": bool(row.content),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
