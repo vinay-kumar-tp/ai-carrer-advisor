@@ -167,3 +167,30 @@ async def generate_json(
         return json.loads(_strip_code_fences(raw))
     except (json.JSONDecodeError, ValueError):
         return None
+
+
+async def diagnose() -> dict:
+    """One live round-trip that surfaces the real error instead of swallowing it.
+
+    Used by the /api/health/ai diagnostic endpoint. Never raises.
+    """
+    provider = _provider()
+    info: dict[str, Any] = {"provider": provider, "model": None, "ok": False, "error": None, "sample": None}
+    if provider is None:
+        info["error"] = "no provider key configured"
+        return info
+    info["model"] = settings.OPENROUTER_MODEL if provider == "openrouter" else _GEMINI_MODEL
+    try:
+        if provider == "openrouter":
+            text = await _openrouter_call("Say the single word: pong", None, 0.0, 20, False)
+        else:
+            text = await _gemini_call("Say the single word: pong", None, 0.0, 20, False)
+        info["ok"] = bool(text)
+        info["sample"] = (text or "")[:120]
+        if not text:
+            info["error"] = "call returned empty (see extract/response shape)"
+    except httpx.HTTPStatusError as exc:
+        info["error"] = f"HTTP {exc.response.status_code}: {exc.response.text[:300]}"
+    except Exception as exc:  # noqa: BLE001
+        info["error"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+    return info

@@ -81,3 +81,12 @@ async def health_check():
         # deterministic local fallbacks instead.
         "ai_enabled": gemini.is_enabled(),
     }
+
+
+@app.get("/api/health/ai")
+async def ai_diagnostic():
+    """Live AI round-trip diagnostic — surfaces the real provider error so a
+    silent fallback (interview serving canned questions) can be debugged.
+    Returns the error text but never the API key."""
+    from app.ai import gemini
+    return await gemini.diagnose()
