@@ -38,6 +38,7 @@ export const App: React.FC = () => {
             <Route path="/aptitude-quest" element={<AptitudeQuestPage />} />
             <Route path="/personality-test" element={<PersonalityTestPage />} />
             <Route path="/position-ai" element={<PositionAIPage />} />
+            <Route path="/candidate/position-ai" element={<PositionAIPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/job-board" element={<JobBoardPage />} />
             <Route path="/my-jobs" element={<MyJobsPage />} />

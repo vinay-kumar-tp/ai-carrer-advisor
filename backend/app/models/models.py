@@ -707,6 +707,9 @@ class Resume(Base):
     target_job_id = Column(String(36), nullable=True)    # set for tailored copies
     document_id = Column(String(36), nullable=True)      # link to uploaded file, if any
     content = Column(JSON, default=dict)                 # structured snapshot for generated resumes
+    sections = Column(JSON, default=list)                # ordered list of enabled section keys
+    job_context = Column(JSON, default=dict)             # {title, description} used for tailoring
+    analysis = Column(JSON, default=dict)                # last AI Analyzer result
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -723,4 +726,54 @@ class ScorecardEntry(Base):
     max_score = Column(Float, nullable=True)
     scored_on = Column(String(20), default="")
     notes = Column(Text, default="")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+# ─── Position AI (Skill Gap & Fit Analyzer) ──────────────────────
+
+class PositionAnalysis(Base):
+    """One saved gap-analysis run: the JDs compared, the profile skills at
+    that moment, and the resulting match/missing breakdown. Snapshotted so
+    History always reflects exactly what was compared, even if the user's
+    skills or the underlying job postings change later."""
+    __tablename__ = "position_analyses"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # What was compared — saved job listing ids (subset of up to 3) and/or raw pasted JD text.
+    job_ids = Column(JSON, default=list)                  # list[str]
+    jd_snapshots = Column(JSON, default=list)             # [{job_id, title, company, required_skills}]
+    pasted_jd_text = Column(Text, default="")             # raw pasted JD, if used instead of/alongside job_ids
+
+    # Candidate snapshot at analysis time.
+    profile_skills = Column(JSON, default=list)           # list[str] — the skills compared against
+    profile_skill_count = Column(Integer, default=0)
+
+    # Result.
+    match_percentage = Column(Integer, default=0)
+    matched_skills = Column(JSON, default=list)            # list[str]
+    missing_skills = Column(JSON, default=list)            # [{skill, jd_count, total_jds}]
+    jd_title = Column(String(500), default="")             # display title (joined if multiple JDs)
+
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class PositionFeedback(Base):
+    """User feedback on the accuracy of a gap analysis, used to tune the
+    matching prompt/algorithm over time."""
+    __tablename__ = "position_feedback"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    analysis_id = Column(String(36), ForeignKey("position_analyses.id", ondelete="SET NULL"), nullable=True)
+
+    score_satisfaction = Column(Boolean, default=False)     # "Are you happy with the current score?"
+    skill_breakdown_accuracy = Column(Boolean, default=False)  # "Are you happy with the skill distribution?"
+    relevance_weighting_ok = Column(Boolean, default=True)   # inverted-phrasing question, stored as-answered
+    missing_skill_accuracy = Column(Boolean, default=True)   # "Do you think some skills are missing?"
+
+    relevance_comment = Column(Text, default="")
+    missing_skill_comment = Column(Text, default="")
+    comments = Column(Text, default="")
+
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
