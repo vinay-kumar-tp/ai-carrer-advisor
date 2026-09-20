@@ -71,4 +71,13 @@ app.include_router(position_ai.candidate_router, prefix="/api/candidate", tags=[
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+    from app.ai import gemini
+    return {
+        "status": "healthy",
+        "app": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        # True once an AI provider key is configured. When False, AI features
+        # (conversational interview, grading, resume optimizer) run on
+        # deterministic local fallbacks instead.
+        "ai_enabled": gemini.is_enabled(),
+    }

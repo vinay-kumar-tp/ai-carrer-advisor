@@ -112,8 +112,9 @@ async def _openrouter_call(
 
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-        "HTTP-Referer": "http://localhost:5173",  # optional attribution for OpenRouter
-        "X-Title": "AI Career Advisor",
+        # Attribution headers for OpenRouter (optional, but good practice).
+        "HTTP-Referer": (settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:5173"),
+        "X-Title": settings.APP_NAME,
     }
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.post(_OPENROUTER_URL, headers=headers, json=body)
